@@ -1,0 +1,11 @@
+# version prints build metadata injected at link time.
+exec oraclint version
+stdout '^oraclint v0.0.0-test$'
+stdout '^commit: abc1234$'
+stdout '^built: 2026-01-01$'
+
+# Unknown commands and flags are usage errors (exit 2).
+exitcode 2 oraclint nope
+stderr 'unknown command'
+exitcode 2 oraclint scan --bogus
+stderr 'unknown flag'
