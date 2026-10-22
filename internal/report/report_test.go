@@ -187,8 +187,8 @@ func TestSARIFContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := log.Runs[0]
-	if len(run.Tool.Driver.Rules) != len(rules.All())+2 {
-		t.Errorf("driver rules = %d, want every rule plus the two pseudo rules", len(run.Tool.Driver.Rules))
+	if len(run.Tool.Driver.Rules) != len(rules.All())+3 {
+		t.Errorf("driver rules = %d, want every rule plus the three pseudo rules", len(run.Tool.Driver.Rules))
 	}
 	var sup int
 	for _, res := range run.Results {
