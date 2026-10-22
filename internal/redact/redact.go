@@ -62,9 +62,45 @@ func (r *Redactor) Apply(s string) string {
 		r.sorted = true
 	}
 	for _, secret := range r.secrets {
-		s = strings.ReplaceAll(s, secret, Mask)
+		if len(secret) < wordBoundaryLen {
+			s = replaceToken(s, secret)
+		} else {
+			s = strings.ReplaceAll(s, secret, Mask)
+		}
 	}
 	return Text(s)
+}
+
+// wordBoundaryLen: secrets shorter than this are only masked as whole tokens.
+// A weak password such as "short" or "pass" would otherwise be masked inside
+// ordinary words ("shorter", "Password.Keystore") and garble the message.
+// Long secrets are masked anywhere, since they never occur by accident.
+const wordBoundaryLen = 8
+
+// replaceToken masks occurrences of secret that are not part of a longer run
+// of letters and digits.
+func replaceToken(s, secret string) string {
+	var b strings.Builder
+	for {
+		i := strings.Index(s, secret)
+		if i < 0 {
+			b.WriteString(s)
+			return b.String()
+		}
+		end := i + len(secret)
+		bounded := (i == 0 || !isAlnum(s[i-1])) && (end == len(s) || !isAlnum(s[end]))
+		b.WriteString(s[:i])
+		if bounded {
+			b.WriteString(Mask)
+		} else {
+			b.WriteString(secret)
+		}
+		s = s[end:]
+	}
+}
+
+func isAlnum(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
 }
 
 var (
