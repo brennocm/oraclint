@@ -78,7 +78,7 @@ oraclint rules explain NS-RPC-001        # read the docs for one rule
 oraclint scan [paths...] [flags]
 
   -f, --format string        text, json or sarif (default "text")
-  -o, --output string        write the report to a file (mode 0600)
+  -o, --output string        write the report to a file (never through a symlink)
       --min-severity string  hide findings below this severity (default "info")
       --fail-on string       exit 1 if a finding has at least this severity, or "none" (default "low")
       --enable strings       rule IDs to run even if experimental

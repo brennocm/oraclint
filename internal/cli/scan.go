@@ -60,7 +60,7 @@ func newScanCommand(info BuildInfo) *cobra.Command {
 	}
 	fl := cmd.Flags()
 	fl.StringVarP(&f.format, "format", "f", report.FormatText, "output format: text, json or sarif")
-	fl.StringVarP(&f.output, "output", "o", "", "write the report to this file instead of stdout")
+	fl.StringVarP(&f.output, "output", "o", "", "write the report to this file instead of stdout (never through a symlink)")
 	fl.StringVar(&f.minSeverity, "min-severity", "info", "hide findings below this severity")
 	fl.StringVar(&f.failOn, "fail-on", "low", "exit 1 if a finding has at least this severity (or \"none\")")
 	fl.StringSliceVar(&f.enable, "enable", nil, "rule IDs to run even if experimental (comma-separated)")
@@ -253,13 +253,15 @@ func writeReport(cmd *cobra.Command, f scanFlags, rep report.Report) error {
 // writeFile writes the report file. It refuses to write through a symlink:
 // when scanning a checked-out pull request, the default output name could be
 // committed as a link pointing at another file, which would be overwritten.
-// New files are created with mode 0600, since a report maps the weak spots of
-// a deployment.
+// New files get the usual mode 0644 (minus the umask): the report is redacted
+// and must be readable by whoever uploads it. In the GitHub Action the scan
+// runs as root while later steps run as the runner user, so 0600 would make
+// the SARIF file unreadable to the upload step.
 func writeFile(path string, data []byte) error {
 	if info, err := os.Lstat(path); err == nil && info.Mode()&fs.ModeSymlink != 0 {
 		return fmt.Errorf("refusing to write report to %s: it is a symbolic link", path)
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) //nolint:gosec // the user chooses the output path
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644) //nolint:gosec // the user chooses the output path; the report holds no secrets
 	if err != nil {
 		return fmt.Errorf("writing report: %w", err)
 	}
