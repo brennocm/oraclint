@@ -1,0 +1,41 @@
+name: oraclint
+description: Static security linter for Chainlink node deployments (not affiliated with Chainlink Labs)
+author: brennocm
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  path:
+    description: "File or directory to scan, relative to the workspace."
+    default: "."
+  format:
+    description: "Output format: text, json or sarif."
+    default: sarif
+  output:
+    description: "File to write the report to (relative to the workspace). Empty prints to the log."
+    default: oraclint.sarif
+  fail-on:
+    description: "Fail the step on findings at or above this severity (info, low, medium, high, critical or none)."
+    default: low
+  min-severity:
+    description: "Hide findings below this severity."
+    default: info
+  experimental:
+    description: "Also run experimental rules (true/false)."
+    default: "false"
+
+runs:
+  using: docker
+  image: Dockerfile
+  # Docker actions receive args as an exec array: no shell ever interprets
+  # input values (the distroless image has no shell at all).
+  args:
+    - scan
+    - --format=${{ inputs.format }}
+    - --output=${{ inputs.output }}
+    - --fail-on=${{ inputs.fail-on }}
+    - --min-severity=${{ inputs.min-severity }}
+    - --experimental=${{ inputs.experimental }}
+    - --
+    - ${{ inputs.path }}
