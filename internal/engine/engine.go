@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/brennocm/oraclint/internal/model"
+	"github.com/brennocm/oraclint/internal/redact"
 	"github.com/brennocm/oraclint/internal/rules"
 )
 
@@ -40,7 +41,7 @@ func Select(all []rules.Rule, opts Options) []rules.Rule {
 }
 
 // Run checks every target with every applicable rule. Problems from the
-// loader become parse-error findings.
+// loader become parse-error findings. Every message is redacted.
 func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule, opts Options) []rules.Finding {
 	var findings []rules.Finding
 	for _, p := range problems {
@@ -63,9 +64,17 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 		}
 	}
 
+	// Safety net: whatever a rule wrote, mask every known secret and
+	// secret-looking pattern before the finding leaves the engine.
+	var redactor redact.Redactor
+	for _, t := range targets {
+		redact.Collect(&redactor, t)
+	}
+
 	kept := findings[:0]
 	for _, f := range findings {
 		if f.Severity >= opts.MinSeverity {
+			f.Message = redactor.Apply(f.Message)
 			kept = append(kept, f)
 		}
 	}
