@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: chainlink
+spec:
+  containers:
+    - name: node
+      image: smartcontract/chainlink:2.69.0
+      env:
+        - name: CL_PASSWORD_KEYSTORE
+          value: example-keystore-password

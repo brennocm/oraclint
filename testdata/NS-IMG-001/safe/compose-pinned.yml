@@ -1,0 +1,5 @@
+services:
+  chainlink:
+    image: smartcontract/chainlink:2.69.0
+  postgres:
+    image: postgres:16.4@sha256:0000000000000000000000000000000000000000000000000000000000000000
