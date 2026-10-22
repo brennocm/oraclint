@@ -69,11 +69,19 @@ type sarifRuleProps struct {
 }
 
 type sarifResult struct {
-	RuleID    string          `json:"ruleId"`
-	RuleIndex int             `json:"ruleIndex"`
-	Level     string          `json:"level"`
-	Message   sarifText       `json:"message"`
-	Locations []sarifLocation `json:"locations"`
+	RuleID       string             `json:"ruleId"`
+	RuleIndex    int                `json:"ruleIndex"`
+	Level        string             `json:"level"`
+	Message      sarifText          `json:"message"`
+	Locations    []sarifLocation    `json:"locations"`
+	Suppressions []sarifSuppression `json:"suppressions,omitempty"`
+}
+
+// sarifSuppression marks a result as suppressed. GitHub code scanning closes
+// suppressed alerts instead of showing them as open.
+type sarifSuppression struct {
+	Kind          string `json:"kind"` // "inSource" or "external"
+	Justification string `json:"justification"`
 }
 
 type sarifLocation struct {
@@ -127,7 +135,7 @@ func securitySeverity(s rules.Severity) string {
 }
 
 func writeSARIF(w io.Writer, rep Report) error {
-	catalog := append([]rules.Metadata{rules.ParseError}, rep.Rules...)
+	catalog := append([]rules.Metadata{rules.ParseError, rules.InvalidSuppression}, rep.Rules...)
 	index := make(map[string]int, len(catalog))
 	driver := sarifDriver{
 		Name:           "oraclint",
@@ -146,7 +154,7 @@ func writeSARIF(w io.Writer, rep Report) error {
 		if line < 1 {
 			line = 1 // whole-file findings: SARIF regions need a line
 		}
-		results = append(results, sarifResult{
+		res := sarifResult{
 			RuleID:    f.RuleID,
 			RuleIndex: index[f.RuleID],
 			Level:     sarifLevel(f.Severity),
@@ -155,7 +163,15 @@ func writeSARIF(w io.Writer, rep Report) error {
 				ArtifactLocation: sarifArtifact{URI: relativePath(rep.BaseDir, f.Location.File), URIBaseID: "%SRCROOT%"},
 				Region:           sarifRegion{StartLine: line, StartColumn: f.Location.Column},
 			}}},
-		})
+		}
+		if f.Suppression != nil {
+			kind := "external"
+			if f.Suppression.Kind == rules.SuppressionInline {
+				kind = "inSource"
+			}
+			res.Suppressions = []sarifSuppression{{Kind: kind, Justification: f.Suppression.Reason}}
+		}
+		results = append(results, res)
 	}
 
 	log := sarifLog{

@@ -39,6 +39,8 @@ type Report struct {
 // Options tune the text reporter.
 type Options struct {
 	Color bool
+	// Quiet omits the summary line, printing only findings.
+	Quiet bool
 }
 
 // Write renders rep in the given format.
@@ -69,9 +71,13 @@ func (c Counts) Total() int {
 	return c.Critical + c.High + c.Medium + c.Low + c.Info
 }
 
+// countBySeverity counts active (not suppressed) findings.
 func countBySeverity(findings []rules.Finding) Counts {
 	var c Counts
 	for _, f := range findings {
+		if f.Suppression != nil {
+			continue
+		}
 		switch f.Severity {
 		case rules.SeverityCritical:
 			c.Critical++
@@ -86,6 +92,16 @@ func countBySeverity(findings []rules.Finding) Counts {
 		}
 	}
 	return c
+}
+
+func countSuppressed(findings []rules.Finding) int {
+	n := 0
+	for _, f := range findings {
+		if f.Suppression != nil {
+			n++
+		}
+	}
+	return n
 }
 
 // relativePath returns path relative to base with forward slashes, when path
