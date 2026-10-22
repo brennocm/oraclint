@@ -37,6 +37,15 @@ type Report struct {
 	// Disabled lists rules turned off by the oraclint config file, so a
 	// config that silences rules is always visible in the output.
 	Disabled []DisabledRule
+	// Excluded lists path patterns excluded by the oraclint config file.
+	Excluded []ExcludedPath
+}
+
+// ExcludedPath is a path pattern removed from the scan by configuration.
+type ExcludedPath struct {
+	Pattern string `json:"pattern"`
+	Reason  string `json:"reason"`
+	Source  string `json:"source"`
 }
 
 // DisabledRule is a rule switched off by configuration, with the reason.

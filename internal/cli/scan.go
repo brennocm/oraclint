@@ -14,6 +14,7 @@ import (
 
 	"github.com/brennocm/oraclint/internal/engine"
 	"github.com/brennocm/oraclint/internal/loader"
+	"github.com/brennocm/oraclint/internal/model"
 	"github.com/brennocm/oraclint/internal/report"
 	"github.com/brennocm/oraclint/internal/rules"
 	"github.com/brennocm/oraclint/internal/suppress"
@@ -30,6 +31,7 @@ type scanFlags struct {
 	noColor      bool
 	configFile   string
 	ignoreSup    bool
+	exclude      []string
 	quiet        bool
 	verbose      bool
 
@@ -66,6 +68,7 @@ func newScanCommand(info BuildInfo) *cobra.Command {
 	fl.BoolVar(&f.experimental, "experimental", false, "also run experimental rules")
 	fl.BoolVar(&f.noColor, "no-color", false, "disable colored output (also honored: NO_COLOR)")
 	fl.StringVar(&f.configFile, "config-file", "", "oraclint configuration file (default: ./"+suppress.DefaultConfigFile+" if present)")
+	fl.StringArrayVar(&f.exclude, "exclude", nil, "skip paths matching this pattern while walking directories (repeatable; \"dir/**\" or globs)")
 	fl.BoolVar(&f.ignoreSup, "ignore-suppressions", false, "ignore the oraclint config file and inline oraclint:ignore directives (audit mode for untrusted content)")
 	fl.BoolVarP(&f.quiet, "quiet", "q", false, "print findings only, no summary or warnings")
 	fl.BoolVarP(&f.verbose, "verbose", "v", false, "log debug information to stderr")
@@ -90,9 +93,15 @@ func runScan(cmd *cobra.Command, info BuildInfo, f scanFlags, paths []string) er
 	if len(paths) == 0 && len(f.config)+len(f.secrets)+len(f.compose)+len(f.k8s)+len(f.env) == 0 {
 		paths = []string{"."}
 	}
+	for _, p := range f.exclude {
+		if !model.ValidPattern(p) {
+			return fmt.Errorf("--exclude: invalid path pattern %q", p)
+		}
+	}
+	exclude := append(append([]string{}, f.exclude...), opts.Suppressions.ExcludedPaths()...)
 	res, err := loader.Load(paths, loader.Options{
 		Config: f.config, Secrets: f.secrets, Compose: f.compose, K8s: f.k8s, Env: f.env,
-		Logger: logger,
+		Exclude: exclude, Logger: logger,
 	})
 	if err != nil {
 		return err
@@ -123,6 +132,7 @@ func runScan(cmd *cobra.Command, info BuildInfo, f scanFlags, paths []string) er
 	rep := report.Report{
 		ToolVersion: info.Version, Rules: ran, Findings: findings, FilesScanned: files, BaseDir: cwd,
 		Disabled: disabledRules(opts.Suppressions),
+		Excluded: excludedPaths(opts.Suppressions),
 	}
 	if err := writeReport(cmd, f, rep); err != nil {
 		return err
@@ -194,6 +204,20 @@ func disabledRules(cfg *suppress.Config) []report.DisabledRule {
 	out := make([]report.DisabledRule, 0, len(cfg.Disable))
 	for _, d := range cfg.Disable {
 		out = append(out, report.DisabledRule{ID: d.Rule, Reason: d.Reason, Source: cfg.File})
+	}
+	return out
+}
+
+// excludedPaths lists the path patterns a config file excludes, for the report.
+func excludedPaths(cfg *suppress.Config) []report.ExcludedPath {
+	if cfg == nil {
+		return nil
+	}
+	var out []report.ExcludedPath
+	for _, e := range cfg.Exclude {
+		for _, p := range e.Paths {
+			out = append(out, report.ExcludedPath{Pattern: p, Reason: e.Reason, Source: cfg.File})
+		}
 	}
 	return out
 }

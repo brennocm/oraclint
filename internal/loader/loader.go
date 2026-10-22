@@ -31,7 +31,10 @@ type Options struct {
 	Compose     []string
 	K8s         []string
 	Env         []string
-	Logger      *slog.Logger
+	// Exclude lists path patterns (see model.MatchPath) skipped while walking
+	// directories. Files named explicitly are never excluded.
+	Exclude []string
+	Logger  *slog.Logger
 }
 
 // Result is everything the loader produced.
@@ -186,6 +189,13 @@ func (l *loader) walk(dir string) error {
 			}
 			return nil
 		}
+		if rel != "." && l.excluded(path) {
+			l.opts.Logger.Debug("excluded", "path", displayPath(path))
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
 		if d.IsDir() {
 			if rel != "." && skipDir(d.Name()) {
 				return fs.SkipDir
@@ -214,6 +224,16 @@ func (l *loader) walk(dir string) error {
 		}
 		return nil
 	})
+}
+
+func (l *loader) excluded(path string) bool {
+	display := displayPath(path)
+	for _, p := range l.opts.Exclude {
+		if model.MatchPath(p, display) {
+			return true
+		}
+	}
+	return false
 }
 
 // opener opens the file to read. It abstracts over plain paths (files named

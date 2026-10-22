@@ -57,7 +57,7 @@ func configSuppression(cfg *Config, f rules.Finding) *rules.Suppression {
 			continue
 		}
 		for _, p := range e.Paths {
-			if matchPath(p, f.Location.File) {
+			if model.MatchPath(p, f.Location.File) {
 				return &rules.Suppression{Kind: rules.SuppressionConfig, Reason: e.Reason, Source: model.Location{File: cfg.File}}
 			}
 		}

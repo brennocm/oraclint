@@ -16,7 +16,8 @@
       "info": 0
     },
     "suppressed": 2,
-    "disabled_rules": []
+    "disabled_rules": [],
+    "excluded_paths": []
   },
   "findings": [
     {

@@ -85,6 +85,7 @@ oraclint scan [paths...] [flags]
       --disable strings      rule IDs not to run
       --experimental         also run experimental rules
       --config-file string   oraclint configuration (default ./.oraclint.yaml if present)
+      --exclude pattern      skip matching paths while walking directories (repeatable)
       --ignore-suppressions  ignore .oraclint.yaml and inline directives (audit mode)
       --no-color             disable colors (NO_COLOR is honored too)
   -q, --quiet                print findings only
@@ -135,11 +136,20 @@ ignore:
   - rule: NS-WEB-001
     paths: ["deploy/staging/**"]
     reason: "TLS is terminated at the staging load balancer"
+exclude:
+  - paths: ["testdata/**"]
+    reason: "test fixtures that are insecure on purpose"
 ```
 
+`exclude` removes paths from the scan entirely (they are not even parsed),
+which is the way to skip fixtures or files that are not meant to parse.
+Patterns are relative to the working directory: an exact path, a glob (`*`
+stays within one directory) or `dir/**`. Files named explicitly on the command
+line are never excluded.
+
 A directive without a reason (or with an unknown rule ID) is not applied and is
-reported as an `invalid-suppression` info finding. Rules disabled by the config
-file are listed in every output format.
+reported as an `invalid-suppression` info finding. Rules disabled and paths
+excluded by the config file are listed in every output format.
 
 **Scanning untrusted content** (for example pull requests from forks): the
 content can carry its own `.oraclint.yaml` and directives. Use

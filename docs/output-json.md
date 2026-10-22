@@ -20,7 +20,8 @@ consumers should ignore fields they do not know.
     "total": 2,
     "by_severity": { "critical": 0, "high": 1, "medium": 1, "low": 0, "info": 0 },
     "suppressed": 0,
-    "disabled_rules": []
+    "disabled_rules": [],
+    "excluded_paths": []
   },
   "findings": [
     {
@@ -44,6 +45,7 @@ consumers should ignore fields they do not know.
 | `summary.by_severity` | object | Counts of active (unsuppressed) findings for `critical`, `high`, `medium`, `low`, `info`. |
 | `summary.suppressed` | integer | Findings suppressed inline or by the config file (still listed in `findings`). |
 | `summary.disabled_rules` | array | Rules turned off by the config file: `rule_id`, `reason`, `source`. Always present. |
+| `summary.excluded_paths` | array | Path patterns excluded by the config file: `pattern`, `reason`, `source`. Always present. |
 | `findings[].suppression` | object | Present on suppressed findings: `kind` (`inline` or `config`), `reason`, `source` location. |
 | `findings` | array | Always present; `[]` when there are no findings. Sorted by file, line, column, rule ID. |
 | `findings[].rule_id` | string | Stable rule ID such as `NS-KS-001`, or `parse-error` for files that could not be scanned. |

@@ -99,6 +99,10 @@ func writeSummary(tw *textWriter, rep Report) {
 			tw.printf("%s %s disabled by %s: %s\n", tw.paint(ansiYellow, "!"), d.ID,
 				redact.Printable(d.Source), redact.Printable(d.Reason))
 		}
+		for _, e := range rep.Excluded {
+			tw.printf("%s %s excluded by %s: %s\n", tw.paint(ansiYellow, "!"), redact.Printable(e.Pattern),
+				redact.Printable(e.Source), redact.Printable(e.Reason))
+		}
 	}()
 	c := countBySeverity(rep.Findings)
 	suppressed := ""
