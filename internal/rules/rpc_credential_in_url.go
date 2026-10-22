@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"strings"
+
 	"github.com/brennocm/oraclint/internal/model"
 	"github.com/brennocm/oraclint/internal/redact"
 )
@@ -59,7 +61,9 @@ func credentialPlace(raw string) string {
 	if u.User != nil {
 		return "user info"
 	}
-	for name := range u.Query() {
+	// Iterate in query order, not map order, so the message is deterministic.
+	for _, pair := range strings.Split(u.RawQuery, "&") {
+		name, _, _ := strings.Cut(pair, "=")
 		if redact.SensitiveParam(name) {
 			return "query parameter " + name
 		}
