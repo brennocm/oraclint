@@ -19,6 +19,29 @@ type envAssignment struct {
 	Literal bool
 }
 
+// nodeSecretEnvVars are the node's secret environment variables (core/config/
+// env/env.go, v2.69.0) plus the Postgres image's password variable, which
+// usually holds the same database password.
+var nodeSecretEnvVars = []string{
+	"CL_DATABASE_URL",
+	"CL_DATABASE_BACKUP_URL",
+	"CL_PASSWORD_KEYSTORE",
+	"CL_PASSWORD_VRF",
+	"CL_PYROSCOPE_AUTH_TOKEN",
+	"CL_PROMETHEUS_AUTH_TOKEN",
+	"CL_THRESHOLD_KEY_SHARE",
+	"POSTGRES_PASSWORD",
+}
+
+func isNodeSecretEnvVar(name string) bool {
+	for _, n := range nodeSecretEnvVars {
+		if name == n {
+			return true
+		}
+	}
+	return false
+}
+
 // interpolation matches compose variable references: ${VAR}, ${VAR:-x}, $VAR.
 var interpolation = regexp.MustCompile(`\$\{|\$[A-Za-z_]`)
 

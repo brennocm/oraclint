@@ -1,0 +1,6 @@
+services:
+  chainlink:
+    image: smartcontract/chainlink:2.69.0
+    environment:
+      CL_DATABASE_URL: postgresql://chainlink:example-password-123@postgres:5432/chainlink
+      CL_PASSWORD_KEYSTORE: example-keystore-password

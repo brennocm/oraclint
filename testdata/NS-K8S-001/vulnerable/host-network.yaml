@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: chainlink
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      containers:
+        - name: node
+          image: smartcontract/chainlink:2.69.0
