@@ -1,0 +1,5 @@
+[Database]
+MaxIdleConns = 10
+
+[WebServer.LDAP]
+ServerTLS = true
