@@ -54,6 +54,13 @@ func TestRedactorApply(t *testing.T) {
 	if got != "a=abc b=**** c=****" {
 		t.Errorf("Apply = %q", got)
 	}
+	// Short secrets are masked only as whole tokens.
+	var short Redactor
+	short.Add("pass")
+	if got := short.Apply("Password.Keystore is short; value pass, url x:pass@h"); got != "Password.Keystore is short; value ****, url x:****@h" {
+		t.Errorf("short secret masking = %q", got)
+	}
+
 	// Overlapping secrets of equal length mask the same way whatever the
 	// registration order.
 	var a, b Redactor

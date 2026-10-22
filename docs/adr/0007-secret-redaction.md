@@ -46,7 +46,11 @@ worse than the misconfiguration it reports.
 - Over-masking is possible: a harmless value under a key named like a secret
   is masked wherever it appears in messages. This is the intended bias.
 - Values shorter than 4 characters and the words true/false/yes/no/on/off/
-  null/none are never registered, to keep messages readable.
+  null/none are never registered, to keep messages readable. Registered
+  secrets shorter than 8 characters are masked only as whole tokens (not
+  inside longer words), so a weak password like "short" does not turn
+  "shorter" into "****er". Rules never put values in messages, so this only
+  narrows the safety net for short values embedded in larger tokens.
 - Keys embedded in URL paths are recognized heuristically (segments of at
   least 20 characters containing a digit); shorter path tokens are a
   documented residual risk.
