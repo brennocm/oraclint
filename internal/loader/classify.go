@@ -27,6 +27,9 @@ type class struct {
 	// strong is true when the file name (or a flag) clearly says the file is
 	// relevant; parse errors are then reported instead of ignored.
 	strong bool
+	// explicit is true for files named on the command line: if they turn out
+	// not to be a node file, that is reported instead of silently skipped.
+	explicit bool
 }
 
 func forcedClass(k model.Kind) class {

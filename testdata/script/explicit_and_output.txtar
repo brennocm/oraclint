@@ -1,0 +1,31 @@
+# A file named on the command line that is not a node file is reported, not
+# silently skipped (which would look like a clean scan).
+exitcode 1 oraclint scan notes.txt
+stdout 'not recognized as a node config'
+exitcode 1 oraclint scan values.yaml
+stdout 'not recognized'
+
+# Explicit files with a weak name still report parse errors.
+exitcode 1 oraclint scan broken.toml
+stdout 'parse-error'
+stdout '1 finding in 1 file'
+
+# The report is never written through a symlink.
+symlink out.sarif -> victim.txt
+exitcode 2 oraclint scan --format sarif --output out.sarif clean
+stderr 'is a symbolic link'
+cmp victim.txt victim.orig
+
+-- notes.txt --
+hello
+-- values.yaml --
+replicas: 2
+-- broken.toml --
+[Log
+-- clean/config.toml --
+[Log]
+Level = 'info'
+-- victim.txt --
+do not overwrite
+-- victim.orig --
+do not overwrite
