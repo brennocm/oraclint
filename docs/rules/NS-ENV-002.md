@@ -10,7 +10,10 @@ Fires when a node secret variable (see NS-ENV-001 for the list) is given a
 literal value:
 
 - in compose `environment:` (map or list syntax), unless the value uses
-  `${VAR}`/`$VAR` interpolation or is passed through from the host (`- VAR`);
+  `${VAR}`/`$VAR` interpolation or is passed through from the host (`- VAR`).
+  A reference with a default, `${VAR:-value}`, counts as literal: the default
+  is committed in the file and used whenever `VAR` is unset. `$$` is
+  compose's escape for a literal `$`;
 - in a Kubernetes container `env:` entry with `value:` instead of
   `valueFrom.secretKeyRef`.
 

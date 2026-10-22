@@ -45,6 +45,25 @@ func isNodeSecretEnvVar(name string) bool {
 // interpolation matches compose variable references: ${VAR}, ${VAR:-x}, $VAR.
 var interpolation = regexp.MustCompile(`\$\{|\$[A-Za-z_]`)
 
+// defaultOnly matches a value that is exactly one reference with a default:
+// ${VAR:-default} or ${VAR-default}.
+var defaultOnly = regexp.MustCompile(`^\$\{[A-Za-z_][A-Za-z0-9_]*:?-(.*)\}$`)
+
+// composeValue decides whether a compose environment value is written in the
+// file. "$$" is compose's escape for a literal "$". A reference with a default
+// (${VAR:-changeme}) counts as literal: the default is committed in the file
+// and is what runs whenever VAR is unset.
+func composeValue(raw string) (value string, literal bool) {
+	unescaped := strings.ReplaceAll(raw, "$$", "")
+	if !interpolation.MatchString(unescaped) {
+		return strings.ReplaceAll(raw, "$$", "$"), true
+	}
+	if m := defaultOnly.FindStringSubmatch(raw); m != nil && m[1] != "" && !interpolation.MatchString(m[1]) {
+		return m[1], true
+	}
+	return raw, false
+}
+
 // envAssignments lists the environment variables a target sets.
 func envAssignments(t *model.Target) []envAssignment {
 	switch t.Kind {
@@ -70,24 +89,26 @@ func composeEnv(t *model.Target) []envAssignment {
 		// Map form: KEY: value
 		keys, values := model.MapPairs(env)
 		for i := range keys {
-			value, isScalar := model.ScalarString(values[i])
+			raw, isScalar := model.ScalarString(values[i])
 			passThrough := !isScalar || values[i].Tag == "!!null"
+			value, literal := composeValue(raw)
 			out = append(out, envAssignment{
 				Name:    keys[i].Value,
 				Value:   value,
 				Loc:     model.YAMLLocation(t.Path, keys[i]),
-				Literal: !passThrough && !interpolation.MatchString(value),
+				Literal: !passThrough && literal,
 			})
 		}
 		// List form: - KEY=value, or - KEY to pass the host value through
 		for _, item := range model.SeqItems(env) {
 			s, _ := model.ScalarString(item)
-			name, value, hasValue := strings.Cut(s, "=")
+			name, raw, hasValue := strings.Cut(s, "=")
+			value, literal := composeValue(raw)
 			out = append(out, envAssignment{
 				Name:    name,
 				Value:   value,
 				Loc:     model.YAMLLocation(t.Path, item),
-				Literal: hasValue && !interpolation.MatchString(value),
+				Literal: hasValue && literal,
 			})
 		}
 	}
