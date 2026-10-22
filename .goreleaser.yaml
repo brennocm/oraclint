@@ -1,0 +1,110 @@
+# GoReleaser v2 configuration. Run by .github/workflows/release.yml on v* tags.
+# Local dry run: goreleaser release --snapshot --clean
+version: 2
+
+project_name: oraclint
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - id: oraclint
+    main: ./cmd/oraclint
+    binary: oraclint
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }} -X main.date={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}" # reproducible builds
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ title .Os }}_{{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: checksums.txt
+
+# Keyless signature of the checksum file (Sigstore bundle with certificate and
+# signature). Verifying it and then the checksums covers every archive.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - --bundle=${signature}
+      - ${artifact}
+      - --yes
+    artifacts: checksum
+
+sboms:
+  - artifacts: archive # syft, one SPDX SBOM per archive
+
+dockers_v2:
+  - id: oraclint
+    ids: [oraclint]
+    dockerfile: build/Dockerfile.release
+    images:
+      - ghcr.io/brennocm/oraclint
+    tags:
+      - "v{{ .Version }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    sbom: true
+    labels:
+      org.opencontainers.image.title: "{{ .ProjectName }}"
+      org.opencontainers.image.description: "Static security linter for Chainlink node deployments"
+      org.opencontainers.image.source: "{{ .GitURL }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.licenses: Apache-2.0
+
+# Keyless signature of the pushed images, by digest.
+docker_signs:
+  - cmd: cosign
+    args:
+      - sign
+      - ${artifact}@${digest}
+      - --yes
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Documentation
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 2
+    - title: Other changes
+      order: 999
+  filters:
+    exclude:
+      - '^test:'
+      - '^chore:'
+
+release:
+  github:
+    owner: brennocm
+    name: oraclint
+  footer: |
+    Verify this release: see "Verifying a release" in the README.
