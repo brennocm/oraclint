@@ -271,3 +271,32 @@ func TestClassifyByName(t *testing.T) {
 		}
 	}
 }
+
+func TestClassifyTOML(t *testing.T) {
+	tests := []struct {
+		name, file, src string
+		want            model.Kind
+	}{
+		{"config with only a shared table", "node.toml", "[WebServer]\nAllowOrigins = '*'\n", model.KindConfig},
+		{"config with only rate limit", "node.toml", "[WebServer.RateLimit]\nUnauthenticated = 5\n", model.KindConfig},
+		{"config with ldap settings", "node.toml", "[WebServer.LDAP]\nServerTLS = false\n", model.KindConfig},
+		{"secrets by content", "node.toml", "[Database]\nURL = 'x'\n[Password]\nKeystore = 'y'\n", model.KindSecrets},
+		{"secrets with ldap credentials", "node.toml", "[WebServer.LDAP]\nServerAddress = 'ldaps://x'\nReadOnlyUserPass = 'y'\n", model.KindSecrets},
+		{"secrets by name", "node-secrets.toml", "[Log]\nLevel = 'info'\n", model.KindSecrets},
+		{"config with misplaced secret", "node.toml", "[Log]\nLevel = 'info'\n[Password]\nKeystore = 'y'\n", model.KindConfig},
+		{"chain list", "chains.toml", "[[EVM]]\nChainID = '1'\n", model.KindConfig},
+		{"cargo", "Cargo.toml", "[package]\nname = 'x'\n", 0},
+		{"empty", "x.toml", "", 0},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			root, err := model.ParseTOML(tc.file, []byte(tc.src))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := classifyTOML(tc.file, root); got != tc.want {
+				t.Errorf("classifyTOML = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
