@@ -1,0 +1,5 @@
+services:
+  chainlink:
+    image: smartcontract/chainlink:2.69.0
+    cap_drop:
+      - ALL

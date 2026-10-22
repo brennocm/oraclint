@@ -172,6 +172,114 @@
               }
             },
             {
+              "id": "NS-DKR-001",
+              "name": "OperatorUiPortPublishedOnAPublicInterface",
+              "shortDescription": {
+                "text": "Operator UI port published on a public interface"
+              },
+              "fullDescription": {
+                "text": "Operator UI port published on a public interface. Publish the port on loopback only (\"127.0.0.1:6688:6688\") and use an SSH tunnel or VPN to reach it."
+              },
+              "help": {
+                "text": "Publish the port on loopback only (\"127.0.0.1:6688:6688\") and use an SSH tunnel or VPN to reach it.",
+                "markdown": "# NS-DKR-001: Operator UI port published on a public interface\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | compose | stable | CWE-668 |\n\n## Description\n\nFires for a compose service running the node (image or service name contains\n`chainlink`) that publishes container port `6688` (default `WebServer.HTTPPort`)\nor `6689` (default `WebServer.TLS.HTTPSPort`) on anything other than a\nloopback address: no host IP (all interfaces), `0.0.0.0`, `::`, or a specific\nnon-loopback IP. Short (`\"6688:6688\"`) and long (`target:`/`host_ip:`) port\nsyntaxes are both understood, including ranges.\n\n## Why it matters\n\nThe operator UI and API manage jobs, keys and bridges. The node security best\npractices say to keep port 6688 closed to the internet and to reach it through\nan SSH tunnel. Docker publishes ports by inserting its own firewall rules, so a\npublished port is often reachable even when a host firewall such as `ufw` is\nconfigured to block it.\n\n## Vulnerable example\n\n```yaml\nservices:\n  chainlink:\n    image: smartcontract/chainlink:2.69.0\n    ports:\n      - \"6688:6688\"\n```\n\n## Fixed example\n\n```yaml\nservices:\n  chainlink:\n    image: smartcontract/chainlink:2.69.0\n    ports:\n      - \"127.0.0.1:6688:6688\"   # then: ssh -L 6688:localhost:6688 host\n```\n\n## Limitations\n\nThe rule uses the default ports. If `WebServer.HTTPPort` is changed, the\npublished port is not matched.\n\n## References\n\n- https://docs.chain.link/chainlink-nodes/resources/best-security-practices\n- https://docs.chain.link/chainlink-nodes/v1/running-a-chainlink-node\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-DKR-001.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "compose",
+                  "CWE-668"
+                ]
+              }
+            },
+            {
+              "id": "NS-DKR-002",
+              "name": "PostgresPortPublishedToTheHostNetwork",
+              "shortDescription": {
+                "text": "Postgres port published to the host network"
+              },
+              "fullDescription": {
+                "text": "Postgres port published to the host network. Remove the ports: entry of the database service (the node reaches it over the compose network), or bind it to 127.0.0.1."
+              },
+              "help": {
+                "text": "Remove the ports: entry of the database service (the node reaches it over the compose network), or bind it to 127.0.0.1.",
+                "markdown": "# NS-DKR-002: Postgres port published to the host network\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | compose | stable | CWE-668 |\n\n## Description\n\nFires for a compose service running Postgres (image name `postgres*`,\n`postgis` or `timescaledb`) that publishes container port `5432` on anything\nother than a loopback address.\n\n## Why it matters\n\nThe node reaches its database over the compose network and needs no published\nport. Publishing it makes the database, which holds the node's encrypted keys\nand all its state, reachable from outside the host and open to password\nguessing. The official Docker guide publishes `5432:5432` for a local test\nsetup and notes that this makes the database accessible outside Docker.\n\n## Vulnerable example\n\n```yaml\nservices:\n  postgres:\n    image: postgres:16\n    ports:\n      - \"5432:5432\"\n```\n\n## Fixed example\n\n```yaml\nservices:\n  postgres:\n    image: postgres:16\n    # no ports: the node connects to postgres:5432 on the compose network\n```\n\n## References\n\n- https://docs.chain.link/chainlink-nodes/v1/running-a-chainlink-node\n- https://docs.chain.link/chainlink-nodes/resources/best-security-practices\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-DKR-002.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "compose",
+                  "CWE-668"
+                ]
+              }
+            },
+            {
+              "id": "NS-DKR-003",
+              "name": "PrivilegedContainerOrHostNamespace",
+              "shortDescription": {
+                "text": "Privileged container or host namespace"
+              },
+              "fullDescription": {
+                "text": "Privileged container or host namespace. Remove privileged, network_mode: host, pid: host and the listed cap_add entries; the node does not need them."
+              },
+              "help": {
+                "text": "Remove privileged, network_mode: host, pid: host and the listed cap_add entries; the node does not need them.",
+                "markdown": "# NS-DKR-003: Privileged container or host namespace\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | compose | stable | CWE-250 |\n\n## Description\n\nFires for any compose service with `privileged: true`, `network_mode: host`,\n`pid: host`, or `cap_add` containing `ALL`, `SYS_ADMIN`, `NET_ADMIN`,\n`SYS_PTRACE`, `SYS_MODULE` or `DAC_READ_SEARCH` (with or without the `CAP_`\nprefix).\n\n## Why it matters\n\nThese settings remove the isolation between the container and the host. A\nbug in the node, an external adapter or any other service with them becomes a\nhost compromise, and from there access to every key and secret on the\nmachine. The node needs none of them.\n\n## Vulnerable example\n\n```yaml\nservices:\n  chainlink:\n    image: smartcontract/chainlink:2.69.0\n    privileged: true\n    network_mode: host\n```\n\n## Fixed example\n\n```yaml\nservices:\n  chainlink:\n    image: smartcontract/chainlink:2.69.0\n    cap_drop: [ALL]\n```\n\n## References\n\n- https://docs.docker.com/reference/compose-file/services/\n- https://docs.docker.com/engine/security/\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-DKR-003.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "compose",
+                  "CWE-250"
+                ]
+              }
+            },
+            {
+              "id": "NS-DKR-004",
+              "name": "NodeContainerRunsAsRoot",
+              "shortDescription": {
+                "text": "Node container runs as root"
+              },
+              "fullDescription": {
+                "text": "Node container runs as root. Remove user: root and fix volume ownership for UID:GID 14933:14933 instead."
+              },
+              "help": {
+                "text": "Remove user: root and fix volume ownership for UID:GID 14933:14933 instead.",
+                "markdown": "# NS-DKR-004: Node container runs as root\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | compose | stable | CWE-250 |\n\n## Description\n\nFires when a node service sets `user:` to `root` or UID `0` (with or without a\ngroup). A service without `user:` is not flagged: official production images\nalready run as UID:GID `14933:14933` (`core/chainlink.Dockerfile`, v2.69.0).\n\n## Why it matters\n\nRunning as root inside the container gives a compromised node process more\npower to escape the container and to read or change mounted host files. The\nusual reason for `user: root` is a permission error on a bind mount; the node\ndocumentation explains how to align the mount with UID 14933 instead.\n\n## Vulnerable example\n\n```yaml\nservices:\n  chainlink:\n    image: smartcontract/chainlink:2.69.0\n    user: root\n```\n\n## Fixed example\n\n```yaml\nservices:\n  chainlink:\n    image: smartcontract/chainlink:2.69.0\n    # no user override; chown the data directory to 14933:14933\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/core/chainlink.Dockerfile\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#rootdir\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-DKR-004.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "compose",
+                  "CWE-250"
+                ]
+              }
+            },
+            {
               "id": "NS-FS-001",
               "name": "SecretsFileAccessibleByGroupOrOthers",
               "shortDescription": {
@@ -723,7 +831,7 @@
       "results": [
         {
           "ruleId": "NS-KS-001",
-          "ruleIndex": 8,
+          "ruleIndex": 12,
           "level": "error",
           "message": {
             "text": "InsecureFastScrypt = true makes every keystore use weak scrypt parameters"
@@ -745,7 +853,7 @@
         },
         {
           "ruleId": "NS-RPC-001",
-          "ruleIndex": 12,
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "EVM chain \"1\" node \"a\": WSURL uses unencrypted ws:// to rpc.example.com"

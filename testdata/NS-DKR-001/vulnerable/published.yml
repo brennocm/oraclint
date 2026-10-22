@@ -1,0 +1,6 @@
+services:
+  chainlink:
+    image: smartcontract/chainlink:2.69.0
+    command: node -config /chainlink/config.toml -secrets /chainlink/secrets.toml start
+    ports:
+      - "6688:6688"
