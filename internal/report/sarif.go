@@ -33,7 +33,8 @@ type sarifRun struct {
 // sarifRunProps records rules disabled by configuration in the run's
 // property bag, so they are visible to whoever reads the SARIF.
 type sarifRunProps struct {
-	DisabledRules []DisabledRule `json:"oraclint/disabledRules"`
+	DisabledRules []DisabledRule `json:"oraclint/disabledRules,omitempty"`
+	ExcludedPaths []ExcludedPath `json:"oraclint/excludedPaths,omitempty"`
 }
 
 type sarifTool struct {
@@ -203,8 +204,8 @@ func writeSARIF(w io.Writer, rep Report) error {
 		Version: "2.1.0",
 		Runs:    []sarifRun{{Tool: sarifTool{Driver: driver}, Results: results}},
 	}
-	if len(rep.Disabled) > 0 {
-		log.Runs[0].Properties = &sarifRunProps{DisabledRules: rep.Disabled}
+	if len(rep.Disabled) > 0 || len(rep.Excluded) > 0 {
+		log.Runs[0].Properties = &sarifRunProps{DisabledRules: rep.Disabled, ExcludedPaths: rep.Excluded}
 	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")

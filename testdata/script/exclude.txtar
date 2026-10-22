@@ -1,0 +1,39 @@
+# --exclude skips matching paths while walking directories.
+exitcode 1 oraclint scan .
+stdout fixtures/config.toml
+exitcode 1 oraclint scan --exclude 'fixtures/**' .
+! stdout fixtures/config.toml
+stdout node/config.toml
+
+# Excluding everything that has findings gives a clean scan.
+exitcode 0 oraclint scan --exclude 'fixtures/**' --exclude 'node/**' .
+
+# Files named explicitly are never excluded.
+exitcode 1 oraclint scan --exclude 'fixtures/**' fixtures/config.toml
+stdout NS-KS-001
+
+# Invalid patterns are usage errors.
+exitcode 2 oraclint scan --exclude '[' .
+stderr 'invalid path pattern'
+
+# Config-file excludes need a reason, are disclosed, and are ignored in
+# audit mode.
+cp exclude.yaml .oraclint.yaml
+exitcode 1 oraclint scan .
+! stdout fixtures/config.toml
+stdout 'fixtures/\*\* excluded by .oraclint.yaml: insecure on purpose'
+exitcode 1 oraclint scan --format json .
+stdout '"excluded_paths": \['
+stdout '"pattern": "fixtures/\*\*"'
+exitcode 1 oraclint scan --ignore-suppressions .
+stdout fixtures/config.toml
+
+-- fixtures/config.toml --
+InsecureFastScrypt = true
+-- node/config.toml --
+[Log]
+Level = 'debug'
+-- exclude.yaml --
+exclude:
+  - paths: ["fixtures/**"]
+    reason: "insecure on purpose"

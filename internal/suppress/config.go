@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/brennocm/oraclint/internal/model"
 )
 
 // DefaultConfigFile is read from the working directory when --config-file is
@@ -32,9 +33,13 @@ const maxConfigSize = 1 << 20
 //	  - rule: NS-WEB-001
 //	    paths: ["deploy/staging/**"]
 //	    reason: "TLS is terminated at the load balancer"
+//	exclude:
+//	  - paths: ["testdata/**"]
+//	    reason: "fixtures that are insecure on purpose"
 type Config struct {
 	Disable []DisableEntry `yaml:"disable"`
 	Ignore  []IgnoreEntry  `yaml:"ignore"`
+	Exclude []ExcludeEntry `yaml:"exclude"`
 	// File is where the config was read from, for locations in output.
 	File string `yaml:"-"`
 }
@@ -43,6 +48,14 @@ type Config struct {
 type DisableEntry struct {
 	Rule   string `yaml:"rule"`
 	Reason string `yaml:"reason"`
+}
+
+// ExcludeEntry removes matching paths from the scan entirely (for example
+// test fixtures that are insecure on purpose). Excluded paths are listed in
+// every output format.
+type ExcludeEntry struct {
+	Paths  []string `yaml:"paths"`
+	Reason string   `yaml:"reason"`
 }
 
 // IgnoreEntry suppresses a rule's findings in matching files.
@@ -99,12 +112,37 @@ func (c *Config) validate(known func(id string) bool) error {
 			return fmt.Errorf("ignore[%d] (%s): paths is required; use disable to turn a rule off everywhere", i, e.Rule)
 		}
 		for _, p := range e.Paths {
-			if _, err := path.Match(p, ""); err != nil {
+			if !model.ValidPattern(p) {
 				return fmt.Errorf("ignore[%d] (%s): invalid path pattern %q", i, e.Rule, p)
 			}
 		}
 	}
+	for i, e := range c.Exclude {
+		if len(e.Paths) == 0 {
+			return fmt.Errorf("exclude[%d]: paths is required", i)
+		}
+		for _, p := range e.Paths {
+			if !model.ValidPattern(p) {
+				return fmt.Errorf("exclude[%d]: invalid path pattern %q", i, p)
+			}
+		}
+		if strings.TrimSpace(e.Reason) == "" {
+			return fmt.Errorf("exclude[%d]: reason is required", i)
+		}
+	}
 	return nil
+}
+
+// ExcludedPaths returns every exclude pattern of the config.
+func (c *Config) ExcludedPaths() []string {
+	if c == nil {
+		return nil
+	}
+	var out []string
+	for _, e := range c.Exclude {
+		out = append(out, e.Paths...)
+	}
+	return out
 }
 
 func checkEntry(section string, i int, rule, reason string, known func(string) bool) error {
@@ -129,17 +167,4 @@ func (c *Config) DisabledRules() map[string]bool {
 		out[e.Rule] = true
 	}
 	return out
-}
-
-// matchPath reports whether file matches pattern. Both use forward slashes.
-// Supported patterns: an exact path, a path.Match glob ("*" stays within one
-// directory), and "dir/**" for everything below dir.
-func matchPath(pattern, file string) bool {
-	pattern = path.Clean(filepath.ToSlash(pattern))
-	file = path.Clean(filepath.ToSlash(file))
-	if dir, ok := strings.CutSuffix(pattern, "/**"); ok {
-		return file == dir || strings.HasPrefix(file, dir+"/")
-	}
-	ok, err := path.Match(pattern, file)
-	return err == nil && ok
 }

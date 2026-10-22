@@ -29,6 +29,8 @@ type jsonSummary struct {
 	Suppressed   int    `json:"suppressed"`
 	// DisabledRules is always present ([] when none), see docs/output-json.md.
 	DisabledRules []DisabledRule `json:"disabled_rules"`
+	// ExcludedPaths is always present ([] when none).
+	ExcludedPaths []ExcludedPath `json:"excluded_paths"`
 }
 
 type jsonFinding struct {
@@ -66,6 +68,7 @@ func writeJSON(w io.Writer, rep Report) error {
 		BySeverity:    counts,
 		Suppressed:    countSuppressed(rep.Findings),
 		DisabledRules: append([]DisabledRule{}, rep.Disabled...),
+		ExcludedPaths: append([]ExcludedPath{}, rep.Excluded...),
 	}
 
 	for _, f := range rep.Findings {
