@@ -124,10 +124,17 @@ func maskUserinfo(raw string) string {
 
 var keyLike = regexp.MustCompile(`^[A-Za-z0-9_-]{20,}$`)
 
+// KeyLikeSegment reports whether a URL path segment looks like an API key:
+// at least 20 characters of [A-Za-z0-9_-] including a digit, which matches
+// the key formats of common RPC providers (Infura, Alchemy, QuickNode).
+func KeyLikeSegment(seg string) bool {
+	return keyLike.MatchString(seg) && strings.ContainsAny(seg, "0123456789")
+}
+
 func maskPath(path string) string {
 	segments := strings.Split(path, "/")
 	for i, seg := range segments {
-		if keyLike.MatchString(seg) && strings.ContainsAny(seg, "0123456789") {
+		if KeyLikeSegment(seg) {
 			segments[i] = Mask
 		}
 	}
@@ -138,14 +145,16 @@ func maskQuery(rawQuery string) string {
 	pairs := strings.Split(rawQuery, "&")
 	for i, pair := range pairs {
 		name, _, hasValue := strings.Cut(pair, "=")
-		if hasValue && isSensitiveParam(name) {
+		if hasValue && SensitiveParam(name) {
 			pairs[i] = name + "=" + Mask
 		}
 	}
 	return strings.Join(pairs, "&")
 }
 
-func isSensitiveParam(name string) bool {
+// SensitiveParam reports whether a URL query parameter name usually carries
+// a credential (key, token, password, signature, ...).
+func SensitiveParam(name string) bool {
 	lower := strings.ToLower(name)
 	for _, p := range sensitiveParams {
 		if lower == p || strings.HasSuffix(lower, "_"+p) || strings.HasSuffix(lower, "-"+p) {

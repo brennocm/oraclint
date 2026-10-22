@@ -138,14 +138,14 @@ func addURLParts(r *Redactor, s string) {
 		r.Add(url.QueryEscape(pw)) // the form that appears in the raw URL
 	}
 	for name, values := range u.Query() {
-		if isSensitiveParam(name) {
+		if SensitiveParam(name) {
 			for _, v := range values {
 				r.Add(v)
 			}
 		}
 	}
 	for _, seg := range strings.Split(u.Path, "/") {
-		if keyLike.MatchString(seg) && strings.ContainsAny(seg, "0123456789") {
+		if KeyLikeSegment(seg) {
 			r.Add(seg)
 		}
 	}
