@@ -1,7 +1,9 @@
-.git
-bin
-dist
-coverage.out
-CLAUDE.md
-ideias.md
-project.md
+# Allowlist: only what the build needs enters the Docker build context, so
+# local files (notes, .env files, build output) can never end up in an image.
+*
+!go.mod
+!go.sum
+!cmd/
+!internal/
+!docs/embed.go
+!docs/rules/
