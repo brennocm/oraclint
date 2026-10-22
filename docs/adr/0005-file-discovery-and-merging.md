@@ -36,7 +36,11 @@ is skipped before parsing.
 - Files larger than 5 MiB are not read (`io.LimitReader`, so a file that grows
   during the scan is still bounded).
 - Only regular files are read (no FIFOs or devices).
-- Symlinks are followed only if they resolve inside the scan root.
+- Directories are walked through an `os.Root` (Go 1.24+): the kernel resolves
+  every open relative to the scan root and refuses to leave it, through
+  symlinks or `..`, even if the tree changes during the scan. Symlinks with a
+  relative target inside the root are followed; absolute targets are refused
+  (os.Root policy), as are broken links and links leaving the root.
 - `.git/` and `node_modules/` are skipped.
 
 **Merging**

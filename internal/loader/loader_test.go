@@ -137,8 +137,12 @@ func TestLoadSymlinks(t *testing.T) {
 	dir := t.TempDir()
 	writeTree(t, dir, map[string]string{"real/config.toml": "[Log]\nLevel = 'info'\n"})
 	mustSymlink(t, filepath.Join(outside, "secrets.toml"), filepath.Join(dir, "secrets.toml"))
-	mustSymlink(t, filepath.Join(dir, "real", "config.toml"), filepath.Join(dir, "config.toml"))
+	mustSymlink(t, filepath.Join("real", "config.toml"), filepath.Join(dir, "config.toml"))
+	// os.Root refuses absolute link targets even when they point inside the
+	// root; that stricter policy is accepted (ADR 0005).
+	mustSymlink(t, filepath.Join(dir, "real", "config.toml"), filepath.Join(dir, "absolute.toml"))
 	mustSymlink(t, filepath.Join(dir, "missing.toml"), filepath.Join(dir, "broken.toml"))
+	mustSymlink(t, filepath.Join("..", filepath.Base(outside), "secrets.toml"), filepath.Join(dir, "dotdot-secrets.toml"))
 
 	res, err := Load([]string{dir}, Options{})
 	if err != nil {
@@ -149,7 +153,12 @@ func TestLoadSymlinks(t *testing.T) {
 		t.Error("symlink escaping the scan root must not be followed")
 	}
 	if got["config.toml"] != "config" {
-		t.Errorf("symlink inside the root should be scanned: %v", got)
+		t.Errorf("relative symlink inside the root should be scanned: %v", got)
+	}
+	for _, name := range []string{"absolute.toml", "dotdot-secrets.toml", "broken.toml"} {
+		if _, ok := got[name]; ok {
+			t.Errorf("%s must not be followed: %v", name, got)
+		}
 	}
 }
 
