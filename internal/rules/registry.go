@@ -12,6 +12,7 @@ import (
 // one-line change in review.
 func All() []Rule {
 	all := []Rule{
+		insecureFlags{},
 		ksFastScrypt{},
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].Metadata().ID < all[j].Metadata().ID })
