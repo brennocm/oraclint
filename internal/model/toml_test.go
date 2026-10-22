@@ -169,3 +169,15 @@ func FuzzParseTOML(f *testing.F) {
 		_ = Merge(root, root)
 	})
 }
+
+func TestImplicitTablePositions(t *testing.T) {
+	root, err := ParseTOML("c.toml", []byte("[Log]\nLevel = 'info'\n\n[Mercury.Credentials.main]\nUsername = 'u'\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"Mercury", "Mercury.Credentials", "Mercury.Credentials.main"} {
+		if got := root.Get(path).Loc.Line; got != 4 {
+			t.Errorf("%s line = %d, want 4", path, got)
+		}
+	}
+}

@@ -1,0 +1,4 @@
+InsecureFastScrypt = true
+
+[Log]
+Level = 'info'
