@@ -1,7 +1,6 @@
 # oraclint
 
 [![CI](https://github.com/brennocm/oraclint/actions/workflows/ci.yml/badge.svg)](https://github.com/brennocm/oraclint/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/brennocm/oraclint)](https://goreportcard.com/report/github.com/brennocm/oraclint)
 [![Release](https://img.shields.io/github/v/release/brennocm/oraclint)](https://github.com/brennocm/oraclint/releases)
 [![License](https://img.shields.io/github/license/brennocm/oraclint)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/brennocm/oraclint/badge)](https://scorecard.dev/viewer/?uri=github.com/brennocm/oraclint)
