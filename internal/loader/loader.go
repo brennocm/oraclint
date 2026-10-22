@@ -3,7 +3,6 @@
 package loader
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 
 	"github.com/brennocm/oraclint/internal/model"
@@ -262,9 +262,9 @@ func (l *loader) loadFile(open opener, display string, c class) {
 
 	case formatYAML:
 		// Helm/Go templates are not supported in v1: their YAML is only
-		// meaningful after rendering, so a weakly classified file containing
-		// template actions is skipped instead of being misread.
-		if !c.strong && bytes.Contains(data, []byte("{{")) {
+		// meaningful after rendering, so a weakly classified template is
+		// skipped instead of being misread.
+		if !c.strong && isGoTemplate(data) {
 			l.opts.Logger.Debug("skipping templated YAML file", "path", display)
 			return
 		}
@@ -330,6 +330,17 @@ func (l *loader) read(open opener, display string, report bool) ([]byte, fs.File
 		return nil, 0, false
 	}
 	return data, mode, true
+}
+
+// templateAction matches Go template actions where Helm puts them: at the
+// start of a line ("{{- if ...}}") or as an unquoted YAML value or list item
+// ("image: {{ .Values.image }}", "- {{ .Values.x }}"). "{{" inside quoted
+// strings or block text, as in Prometheus or Alertmanager rules stored in a
+// ConfigMap, does not count: those files are real manifests.
+var templateAction = regexp.MustCompile(`(?m)^\s*(?:-\s+)?(?:[^\s:#'"]+:\s+)?\{\{`)
+
+func isGoTemplate(data []byte) bool {
+	return templateAction.Match(data)
 }
 
 // notRecognized handles a file that turned out not to be a node file. Files

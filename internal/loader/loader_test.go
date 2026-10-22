@@ -309,3 +309,24 @@ func TestClassifyTOML(t *testing.T) {
 		})
 	}
 }
+
+func TestIsGoTemplate(t *testing.T) {
+	tests := []struct {
+		src  string
+		want bool
+	}{
+		{"{{- if .Values.enabled }}\napiVersion: v1\n", true},
+		{"metadata:\n  name: {{ .Release.Name }}\n", true},
+		{"args:\n  - {{ .Values.arg }}\n", true},
+		{"  {{- include \"x\" . | nindent 4 }}\n", true},
+		{"data:\n  rule: \"{{ $labels.instance }} is down\"\n", false},
+		{"data:\n  tpl: |\n    Instance {{ $labels.instance }} is down\n", false},
+		{"annotations:\n  summary: '{{ $value }}'\n", false},
+		{"apiVersion: v1\nkind: Pod\n", false},
+	}
+	for _, tc := range tests {
+		if got := isGoTemplate([]byte(tc.src)); got != tc.want {
+			t.Errorf("isGoTemplate(%q) = %v, want %v", tc.src, got, tc.want)
+		}
+	}
+}
