@@ -152,3 +152,17 @@ func TestHostileInputs(t *testing.T) {
 		})
 	}
 }
+
+func TestTerminalEscapesAreNeutralized(t *testing.T) {
+	findings, _ := scanWithin(t, 10*time.Second, map[string][]byte{
+		"config.toml": []byte("[Tracing]\nEnabled = true\nMode = 'unencrypted'\nCollectorTarget = \"\\u001b[2J\\u202eevil.example.com:4317\"\n"),
+	})
+	if !hasRule(findings, "NS-TRC-001") {
+		t.Fatal("expected NS-TRC-001")
+	}
+	for _, f := range findings {
+		if strings.ContainsAny(f.Message, "\x1b\u202e") {
+			t.Errorf("raw control characters in message: %q", f.Message)
+		}
+	}
+}
