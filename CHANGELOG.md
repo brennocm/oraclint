@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-22
+
+First public release.
+
 ### Added
 
 - `oraclint scan` for Chainlink node `config.toml` and `secrets.toml`,
@@ -27,3 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Exit codes 0 (clean), 1 (findings at or above `--fail-on`), 2 (error).
 - GitHub Action, multi-arch container image, signed release archives with
   SBOMs and build provenance.
+
+[Unreleased]: https://github.com/brennocm/oraclint/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/brennocm/oraclint/releases/tag/v0.1.0
