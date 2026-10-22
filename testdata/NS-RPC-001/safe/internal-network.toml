@@ -1,0 +1,7 @@
+[[EVM]]
+ChainID = '1'
+
+[[EVM.Nodes]]
+Name = 'local-geth'
+WSURL = 'ws://geth:8546'
+HTTPURL = 'http://10.0.0.5:8545'
