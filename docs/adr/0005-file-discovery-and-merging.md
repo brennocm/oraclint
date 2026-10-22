@@ -28,8 +28,12 @@ being abusable by a malicious repository (for example in a pull request scan).
 
 Parse errors and oversized files with a **strong** signal are reported as
 findings. Weak candidates that fail to parse are skipped (debug log), because
-they are usually not node files. Weak YAML containing `{{` (Helm/Go templates)
-is skipped before parsing.
+they are usually not node files. Weak YAML that looks like a Helm/Go
+template (a `{{` action at the start of a line or as an unquoted value) is
+skipped before parsing. `{{` inside quoted strings or text, as in Prometheus
+rules stored in a ConfigMap, does not count; a block-text line that starts with
+`{{` still does (accepted limitation). Files named explicitly on the command
+line are always reported if they cannot be used, never skipped silently.
 
 **Safety limits**
 
