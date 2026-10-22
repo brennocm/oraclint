@@ -1,0 +1,5 @@
+[Insecure]
+DevWebServer = true
+OCRDevelopmentMode = true
+InfiniteDepthQueries = true
+DisableRateLimiting = true
