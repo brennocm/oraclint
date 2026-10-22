@@ -1,0 +1,5 @@
+[WebServer.TLS]
+CertPath = '/chainlink/tls/server.crt'
+KeyPath = '/chainlink/tls/server.key'
+HTTPSPort = 6689
+ForceRedirect = true

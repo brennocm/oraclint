@@ -168,6 +168,196 @@
                   "CWE-312"
                 ]
               }
+            },
+            {
+              "id": "NS-WEB-001",
+              "name": "OperatorUiServedWithoutHttps",
+              "shortDescription": {
+                "text": "Operator UI served without HTTPS"
+              },
+              "fullDescription": {
+                "text": "Operator UI served without HTTPS. Configure WebServer.TLS (CertPath, KeyPath, HTTPSPort), or terminate TLS at a reverse proxy and suppress this finding with that reason."
+              },
+              "help": {
+                "text": "Configure WebServer.TLS (CertPath, KeyPath, HTTPSPort), or terminate TLS at a reverse proxy and suppress this finding with that reason.",
+                "markdown": "# NS-WEB-001: Operator UI served without HTTPS\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | config | stable | CWE-319 |\n\n## Description\n\nFires when `WebServer.TLS.HTTPSPort = 0` (default `6689`) while the plaintext\nlistener `WebServer.HTTPPort` is enabled (default `6688`).\n\n## Why it matters\n\nThe operator UI and API control the node: jobs, bridges, keys and\ntransactions. With HTTPS disabled, logins, API credentials and session\ncookies travel in cleartext between the operator and the node. The node runs\nits TLS server only when `HTTPSPort` is non-zero (verified in v2.69.0,\n`core/cmd/shell.go`).\n\nIf TLS is terminated by a reverse proxy in front of the node and the node port\nis not reachable from anywhere else, suppress this finding with that reason.\n\n## Vulnerable example\n\n```toml\n[WebServer.TLS]\nHTTPSPort = 0\n```\n\n## Fixed example\n\n```toml\n[WebServer.TLS]\nCertPath = '/chainlink/tls/server.crt'\nKeyPath = '/chainlink/tls/server.key'\nHTTPSPort = 6689\nForceRedirect = true\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#webservertls\n- https://docs.chain.link/chainlink-nodes/resources/best-security-practices\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-WEB-001.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-319"
+                ]
+              }
+            },
+            {
+              "id": "NS-WEB-002",
+              "name": "SessionCookiesWithoutTheSecureFlag",
+              "shortDescription": {
+                "text": "Session cookies without the Secure flag"
+              },
+              "fullDescription": {
+                "text": "Session cookies without the Secure flag. Remove WebServer.SecureCookies (default true) and access the UI over HTTPS."
+              },
+              "help": {
+                "text": "Remove WebServer.SecureCookies (default true) and access the UI over HTTPS.",
+                "markdown": "# NS-WEB-002: Session cookies without the Secure flag\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | config | stable | CWE-614 |\n\n## Description\n\nFires when `WebServer.SecureCookies = false` (default `true`).\n\n## Why it matters\n\nWithout the `Secure` attribute, the browser also sends the operator session\ncookie over plaintext HTTP. Anyone able to observe that traffic can replay the\ncookie and act as the operator until the session expires. The node docs\ndescribe this setting as a way to \"enable standard HTTP requests\", i.e. a\ndevelopment convenience.\n\n## Vulnerable example\n\n```toml\n[WebServer]\nSecureCookies = false\n```\n\n## Fixed example\n\n```toml\n[WebServer]\n# SecureCookies removed (defaults to true); access the UI over HTTPS\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#securecookies\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-WEB-002.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-614"
+                ]
+              }
+            },
+            {
+              "id": "NS-WEB-003",
+              "name": "WildcardCorsOrigin",
+              "shortDescription": {
+                "text": "Wildcard CORS origin"
+              },
+              "fullDescription": {
+                "text": "Wildcard CORS origin. Set WebServer.AllowOrigins to the exact URL(s) used to reach the operator UI."
+              },
+              "help": {
+                "text": "Set WebServer.AllowOrigins to the exact URL(s) used to reach the operator UI.",
+                "markdown": "# NS-WEB-003: Wildcard CORS origin\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | config | stable | CWE-942 |\n\n## Description\n\nFires when any comma-separated entry of `WebServer.AllowOrigins` is `*`\n(default `http://localhost:3000,http://localhost:6688`).\n\n## Why it matters\n\nThe node passes the entries to gin-contrib/cors (v1.7.2), which switches to\n\"allow all origins\" as soon as one entry is `*` and answers every origin with\n`Access-Control-Allow-Origin: *`. Browsers do not expose credentialed\nresponses for a wildcard origin, which limits the damage, but any website a\nnode operator visits can still send requests to the node API and read\nunauthenticated responses. The node documentation recommends setting explicit\norigins \"for security reasons\".\n\n## Vulnerable example\n\n```toml\n[WebServer]\nAllowOrigins = '*'\n```\n\n## Fixed example\n\n```toml\n[WebServer]\nAllowOrigins = 'https://node.example.com'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#alloworigins\n- https://github.com/gin-contrib/cors/blob/v1.7.2/config.go\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-WEB-003.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-942"
+                ]
+              }
+            },
+            {
+              "id": "NS-WEB-004",
+              "name": "HttpNotRedirectedToHttps",
+              "shortDescription": {
+                "text": "HTTP not redirected to HTTPS"
+              },
+              "fullDescription": {
+                "text": "HTTP not redirected to HTTPS. Set WebServer.TLS.ForceRedirect = true, or disable the plaintext listener with WebServer.HTTPPort = 0."
+              },
+              "help": {
+                "text": "Set WebServer.TLS.ForceRedirect = true, or disable the plaintext listener with WebServer.HTTPPort = 0.",
+                "markdown": "# NS-WEB-004: HTTP not redirected to HTTPS\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| low | config | stable | CWE-319 |\n\n## Description\n\nFires when TLS is explicitly configured (`WebServer.TLS.CertPath`, `KeyPath`\nor `HTTPSPort` set, and HTTPS not disabled), the plaintext listener is enabled\n(`WebServer.HTTPPort`, default `6688`) and `WebServer.TLS.ForceRedirect` is not\n`true` (default `false`).\n\n## Why it matters\n\nHaving HTTPS available does not help if operators still reach the plaintext\nport: an old bookmark or a typed `http://` URL results in a cleartext login.\n`ForceRedirect` makes the node redirect those requests to HTTPS. Alternatively\ndisable the plaintext listener entirely.\n\n## Vulnerable example\n\n```toml\n[WebServer.TLS]\nCertPath = '/chainlink/tls/server.crt'\nKeyPath = '/chainlink/tls/server.key'\n```\n\n## Fixed example\n\n```toml\n[WebServer.TLS]\nCertPath = '/chainlink/tls/server.crt'\nKeyPath = '/chainlink/tls/server.key'\nForceRedirect = true\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#forceredirect\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-WEB-004.md",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "security-severity": "3.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-319"
+                ]
+              }
+            },
+            {
+              "id": "NS-WEB-005",
+              "name": "LongIdleSessionTimeout",
+              "shortDescription": {
+                "text": "Long idle session timeout"
+              },
+              "fullDescription": {
+                "text": "Long idle session timeout. Keep the session timeout at or below 1h (node default: 15m)."
+              },
+              "help": {
+                "text": "Keep the session timeout at or below 1h (node default: 15m).",
+                "markdown": "# NS-WEB-005: Long idle session timeout\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| low | config | stable | CWE-613 |\n\n## Description\n\nFires when an explicitly set idle session timeout is longer than one hour:\n`WebServer.SessionTimeout` (default `15m`), plus `WebServer.LDAP.SessionTimeout`\nor `WebServer.OIDC.SessionTimeout` when that authentication method is active\n(defaults `15m0s`).\n\n## Why it matters\n\nThe idle timeout decides how long a forgotten browser tab or a copied session\ncookie stays usable. Operator sessions can change jobs, bridges and keys, so\nthe node default is short. The one-hour threshold leaves room for convenience\nwhile catching day-long sessions.\n\n## Vulnerable example\n\n```toml\n[WebServer]\nSessionTimeout = '24h'\n```\n\n## Fixed example\n\n```toml\n[WebServer]\nSessionTimeout = '15m'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#sessiontimeout\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-WEB-005.md",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "security-severity": "3.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-613"
+                ]
+              }
+            },
+            {
+              "id": "NS-WEB-006",
+              "name": "LdapAuthenticationWithoutTls",
+              "shortDescription": {
+                "text": "LDAP authentication without TLS"
+              },
+              "fullDescription": {
+                "text": "LDAP authentication without TLS. Remove WebServer.LDAP.ServerTLS = false (default true) and use an ldaps:// server address."
+              },
+              "help": {
+                "text": "Remove WebServer.LDAP.ServerTLS = false (default true) and use an ldaps:// server address.",
+                "markdown": "# NS-WEB-006: LDAP authentication without TLS\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | config | stable | CWE-319, CWE-523 |\n\n## Description\n\nFires when `WebServer.AuthenticationMethod = 'ldap'` and\n`WebServer.LDAP.ServerTLS = false` (default `true`).\n\n## Why it matters\n\nWith LDAP authentication, the node forwards every operator's username and\npassword to the directory server and binds with a read-only service account.\nWithout `ldaps://`, all of these credentials cross the network in cleartext,\nand they are usually corporate credentials valid far beyond the node.\n\n## Vulnerable example\n\n```toml\n[WebServer]\nAuthenticationMethod = 'ldap'\n\n[WebServer.LDAP]\nServerTLS = false\n```\n\n## Fixed example\n\n```toml\n[WebServer]\nAuthenticationMethod = 'ldap'\n\n[WebServer.LDAP]\nServerTLS = true\n```\n\nwith `ServerAddress = 'ldaps://...'` in `secrets.toml`.\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#webserverldap\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-WEB-006.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-319",
+                  "CWE-523"
+                ]
+              }
+            },
+            {
+              "id": "NS-WEB-007",
+              "name": "LoginRateLimitRelaxed",
+              "shortDescription": {
+                "text": "Login rate limit relaxed"
+              },
+              "fullDescription": {
+                "text": "Login rate limit relaxed. Keep WebServer.RateLimit.Unauthenticated / UnauthenticatedPeriod near the default (5 per 20s)."
+              },
+              "help": {
+                "text": "Keep WebServer.RateLimit.Unauthenticated / UnauthenticatedPeriod near the default (5 per 20s).",
+                "markdown": "# NS-WEB-007: Login rate limit relaxed\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| low | config | experimental | CWE-307 |\n\n## Description\n\nFires when `WebServer.RateLimit.Unauthenticated` and\n`WebServer.RateLimit.UnauthenticatedPeriod` (defaults `5` per `20s`, i.e.\n15 per minute) are set so that more than 30 unauthenticated requests per minute\nare allowed.\n\nExperimental (disabled by default; enable with `--experimental` or\n`--enable NS-WEB-007`): the right limit depends on how many people and tools\nreach the node, so the threshold is a judgment call.\n\n## Why it matters\n\nThe unauthenticated limit is what throttles password guessing against the\noperator login. Relaxing it makes online brute-force attacks faster.\n\n## Vulnerable example\n\n```toml\n[WebServer.RateLimit]\nUnauthenticated = 100\nUnauthenticatedPeriod = '1m'\n```\n\n## Fixed example\n\n```toml\n[WebServer.RateLimit]\nUnauthenticated = 5\nUnauthenticatedPeriod = '20s'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#webserverratelimit\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-WEB-007.md",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "security-severity": "3.0",
+                "precision": "medium",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-307"
+                ]
+              }
             }
           ]
         }

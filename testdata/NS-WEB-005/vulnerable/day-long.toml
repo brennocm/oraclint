@@ -1,0 +1,2 @@
+[WebServer]
+SessionTimeout = '24h'

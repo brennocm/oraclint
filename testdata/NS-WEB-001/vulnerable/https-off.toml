@@ -1,0 +1,5 @@
+[WebServer]
+HTTPPort = 6688
+
+[WebServer.TLS]
+HTTPSPort = 0

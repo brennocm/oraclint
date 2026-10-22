@@ -1,0 +1,3 @@
+[WebServer.RateLimit]
+Unauthenticated = 100
+UnauthenticatedPeriod = '1m'
