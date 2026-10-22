@@ -1,0 +1,2 @@
+[WebServer]
+AllowOrigins = 'https://node.example.com'

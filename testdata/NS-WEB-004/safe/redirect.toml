@@ -1,0 +1,4 @@
+[WebServer.TLS]
+CertPath = '/chainlink/tls/server.crt'
+KeyPath = '/chainlink/tls/server.key'
+ForceRedirect = true

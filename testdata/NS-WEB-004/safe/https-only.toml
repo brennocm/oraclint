@@ -1,0 +1,6 @@
+[WebServer]
+HTTPPort = 0
+
+[WebServer.TLS]
+CertPath = '/chainlink/tls/server.crt'
+KeyPath = '/chainlink/tls/server.key'

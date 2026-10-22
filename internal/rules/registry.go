@@ -17,6 +17,13 @@ func All() []Rule {
 		ksFastScrypt{},
 		rpcPlaintext{},
 		secretInConfig{},
+		webCORSWildcard{},
+		webHTTPSDisabled{},
+		webInsecureCookies{},
+		webLDAPNoTLS{},
+		webNoHTTPSRedirect{},
+		webRateLimit{},
+		webSessionTimeout{},
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].Metadata().ID < all[j].Metadata().ID })
 	return all
