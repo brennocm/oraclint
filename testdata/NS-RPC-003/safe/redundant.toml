@@ -1,0 +1,12 @@
+[[EVM]]
+ChainID = '1'
+
+[[EVM.Nodes]]
+Name = 'provider-a'
+WSURL = 'wss://rpc-a.example.com/ws'
+HTTPURL = 'https://rpc-a.example.com'
+
+[[EVM.Nodes]]
+Name = 'provider-b'
+WSURL = 'wss://rpc-b.example.net/ws'
+HTTPURL = 'https://rpc-b.example.net'

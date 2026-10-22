@@ -1,0 +1,7 @@
+[[EVM]]
+ChainID = '1'
+
+[[EVM.Nodes]]
+Name = 'infura'
+WSURL = 'wss://mainnet.infura.io/ws/v3/0123456789abcdef0123456789abcdef'
+HTTPURL = 'https://mainnet.infura.io/v3/0123456789abcdef0123456789abcdef'

@@ -223,6 +223,61 @@
               }
             },
             {
+              "id": "NS-RPC-002",
+              "name": "CredentialEmbeddedInRpcUrl",
+              "shortDescription": {
+                "text": "Credential embedded in RPC URL"
+              },
+              "fullDescription": {
+                "text": "Credential embedded in RPC URL. Keep RPC URLs in a config file that is not committed or inject them via CL_CONFIG from a secret store; restrict the key at the provider (allowed IPs/origins)."
+              },
+              "help": {
+                "text": "Keep RPC URLs in a config file that is not committed or inject them via CL_CONFIG from a secret store; restrict the key at the provider (allowed IPs/origins).",
+                "markdown": "# NS-RPC-002: Credential embedded in RPC URL\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | config | stable | CWE-798, CWE-312 |\n\n## Description\n\nFires for every `HTTPURL`, `WSURL` or `HTTPURLExtraWrite` of an `[[EVM.Nodes]]`\nentry (enabled or not) that carries:\n\n- user info (`https://user:password@host`);\n- a query parameter named like a credential (`key`, `apikey`, `token`,\n  `secret`, `auth`, `signature`, ...); or\n- a path segment that looks like an API key: at least 20 characters of\n  letters, digits, `-` or `_`, including a digit. This matches the formats of\n  common providers such as Infura (`/v3/\u003ckey\u003e`), Alchemy (`/v2/\u003ckey\u003e`) and\n  QuickNode (`/\u003ctoken\u003e/`).\n\n## Why it matters\n\nRPC provider keys are billable credentials and, when unrestricted, let anyone\nuse the quota or impersonate the node's traffic. The node has no secrets field\nfor RPC URLs, so they live in config files, which are usually committed,\ncopied into tickets and shared with other teams.\n\n## Vulnerable example\n\n```toml\n[[EVM.Nodes]]\nName = 'infura'\nHTTPURL = 'https://mainnet.infura.io/v3/\u003ckey\u003e'\n```\n\n## Fixed example\n\nMove the `[[EVM]]` sections with keys to a separate config file that is not\ncommitted (the node merges multiple `-config` files in order), or inject them\nwith the `CL_CONFIG` environment variable from a secret manager; the node\napplies `CL_CONFIG` last. Restrict keys at the provider to the node's IP\naddresses. Rotate any key that was committed.\n\n## Limitations\n\nKeys shorter than 20 characters in the URL path are not recognized.\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#evmnodes\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-RPC-002.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-798",
+                  "CWE-312"
+                ]
+              }
+            },
+            {
+              "id": "NS-RPC-003",
+              "name": "SinglePrimaryRpcNodeForChain",
+              "shortDescription": {
+                "text": "Single primary RPC node for chain"
+              },
+              "fullDescription": {
+                "text": "Single primary RPC node for chain. Configure at least two primary [[EVM.Nodes]], ideally from different providers, or set IsLoadBalancedRPC = true if the URL fronts several RPC nodes."
+              },
+              "help": {
+                "text": "Configure at least two primary [[EVM.Nodes]], ideally from different providers, or set IsLoadBalancedRPC = true if the URL fronts several RPC nodes.",
+                "markdown": "# NS-RPC-003: Single primary RPC node for chain\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| low | config | stable | CWE-1357 |\n\n## Description\n\nFires for each enabled `[[EVM]]` chain (`Enabled` defaults to `true`) that has\nexactly one primary node (`SendOnly` not `true`), when that node is not marked\n`IsLoadBalancedRPC = true`.\n\n## Why it matters\n\nAn oracle node is only as available and as honest as its view of the chain.\nWith a single primary RPC endpoint, an outage at that provider stops the node\non that chain, and stale or manipulated responses cannot be noticed by\ncomparing with another source. The node security best practices recommend\nredundant, load-balanced RPC connectivity. With a single non-load-balanced\nnode, the node also marks it alive even when it is out of sync\n(`IsLoadBalancedRPC` docs).\n\n## Vulnerable example\n\n```toml\n[[EVM]]\nChainID = '1'\n\n[[EVM.Nodes]]\nName = 'only'\nHTTPURL = 'https://rpc-a.example.com'\n```\n\n## Fixed example\n\n```toml\n[[EVM.Nodes]]\nName = 'provider-a'\nHTTPURL = 'https://rpc-a.example.com'\n\n[[EVM.Nodes]]\nName = 'provider-b'\nHTTPURL = 'https://rpc-b.example.net'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#evmnodes\n- https://docs.chain.link/chainlink-nodes/resources/best-security-practices\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-RPC-003.md",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "security-severity": "3.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-1357"
+                ]
+              }
+            },
+            {
               "id": "NS-SEC-001",
               "name": "SecretSettingInConfigFile",
               "shortDescription": {
