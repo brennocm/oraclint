@@ -1,0 +1,266 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "oraclint",
+          "version": "v0.0.0-test",
+          "informationUri": "https://github.com/brennocm/oraclint",
+          "rules": [
+            {
+              "id": "parse-error",
+              "name": "FileCouldNotBeScanned",
+              "shortDescription": {
+                "text": "File could not be scanned"
+              },
+              "fullDescription": {
+                "text": "File could not be scanned. Fix the file so it parses, or exclude it from the scan."
+              },
+              "help": {
+                "text": "Fix the file so it parses, or exclude it from the scan.",
+                "markdown": "# File could not be scanned\n\nFix the file so it parses, or exclude it from the scan."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security"
+                ]
+              }
+            },
+            {
+              "id": "NS-DB-002",
+              "name": "PostgresConnectionToRemoteHostWithoutTls",
+              "shortDescription": {
+                "text": "Postgres connection to remote host without TLS"
+              },
+              "fullDescription": {
+                "text": "Postgres connection to remote host without TLS. Use sslmode=verify-full (or at least sslmode=require) for databases reached over a network."
+              },
+              "help": {
+                "text": "Use sslmode=verify-full (or at least sslmode=require) for databases reached over a network.",
+                "markdown": "# NS-DB-002: Postgres connection to remote host without TLS\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | secrets | stable | CWE-319 |\n\n## Description\n\nFires when `Database.URL` or `Database.BackupURL` in `secrets.toml` points to a\nhost on a public network with `sslmode=disable` or `sslmode=allow`.\n\nUnix sockets (`?host=/var/run/postgresql`) and internal hosts (see NS-RPC-001)\nare not flagged.\n\n## Why it matters\n\nThe node database stores encrypted keys, job specs, pending transactions and\nbridge credentials. The connection also carries the database password. With\n`disable` nothing is encrypted; with `allow` the client only uses TLS if the\nserver insists, so an active attacker can downgrade it. The official guide uses\n`sslmode=disable` for local testing only and says never to do this on a\nproduction node.\n\n## Vulnerable example\n\n```toml\n[Database]\nURL = 'postgresql://chainlink:...@db.example.com:5432/chainlink?sslmode=disable'\n```\n\n## Fixed example\n\n```toml\n[Database]\nURL = 'postgresql://chainlink:...@db.example.com:5432/chainlink?sslmode=verify-full\u0026sslrootcert=/certs/ca.pem'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md#database\n- https://docs.chain.link/chainlink-nodes/v1/running-a-chainlink-node\n- https://www.postgresql.org/docs/current/libpq-ssl.html\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-DB-002.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "secrets",
+                  "CWE-319"
+                ]
+              }
+            },
+            {
+              "id": "NS-INS-001",
+              "name": "DevelopmentOnlyInsecureFlagEnabled",
+              "shortDescription": {
+                "text": "Development-only [Insecure] flag enabled"
+              },
+              "fullDescription": {
+                "text": "Development-only [Insecure] flag enabled. Remove the [Insecure] section from production configuration."
+              },
+              "help": {
+                "text": "Remove the [Insecure] section from production configuration.",
+                "markdown": "# NS-INS-001: Development-only [Insecure] flag enabled\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | config | stable | CWE-489 |\n\n## Description\n\nFires for each of these set to `true` (all default to `false`):\n\n- `Insecure.DevWebServer`: skips secure web server settings (allowed hosts, SSL).\n- `Insecure.OCRDevelopmentMode`: runs OCR in development mode.\n- `Insecure.InfiniteDepthQueries`: disables the GraphQL query depth limit.\n- `Insecure.DisableRateLimiting`: disables rate limiting.\n\n## Why it matters\n\nThese switches remove protections of the operator API and OCR to make local\ndevelopment easier. Production builds of the node reject them at startup\n(`Insecure.ValidateConfig`; `OCRDevelopmentMode` is also accepted by test\nbuilds). This rule is an **early warning**: it catches the setting in CI before a\ndeployment fails, and before a development build with these settings is\nexposed.\n\n## Vulnerable example\n\n```toml\n[Insecure]\nDevWebServer = true\n```\n\n## Fixed example\n\n```toml\n# no [Insecure] section in production configuration\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#insecure\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/core/config/toml/types.go\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-INS-001.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-489"
+                ]
+              }
+            },
+            {
+              "id": "NS-KS-001",
+              "name": "KeystoreEncryptedWithInsecureFastScryptParameters",
+              "shortDescription": {
+                "text": "Keystore encrypted with insecure fast scrypt parameters"
+              },
+              "fullDescription": {
+                "text": "Keystore encrypted with insecure fast scrypt parameters. Remove InsecureFastScrypt (default false) and rotate keys created while it was enabled."
+              },
+              "help": {
+                "text": "Remove InsecureFastScrypt (default false) and rotate keys created while it was enabled.",
+                "markdown": "# NS-KS-001: Keystore encrypted with insecure fast scrypt parameters\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | config | stable | CWE-916 |\n\n## Description\n\nFires when `InsecureFastScrypt = true` is set in `config.toml` (default: `false`).\n\n## Why it matters\n\nThe node encrypts its private keys (EVM transmitter keys, OCR and P2P keys) with\na password-derived key using scrypt. `InsecureFastScrypt` replaces the scrypt\nparameters with cheap ones meant for tests. Anyone who obtains the database or a\nkey export can then brute-force the keystore password orders of magnitude\nfaster.\n\nThe node documentation says \"DO NOT ENABLE THIS IN PRODUCTION\", but unlike the\n`[Insecure]` section the setting is **not** rejected by production builds\n(verified in v2.69.0), so nothing stops it from reaching a live node.\n\n## Vulnerable example\n\n```toml\nInsecureFastScrypt = true\n```\n\n## Fixed example\n\n```toml\n# InsecureFastScrypt removed (defaults to false)\n```\n\nKeys created while the setting was enabled were encrypted with weak parameters;\nrotate them.\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#insecurefastscrypt\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-KS-001.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-916"
+                ]
+              }
+            },
+            {
+              "id": "NS-RPC-001",
+              "name": "RpcEndpointUsesUnencryptedTransport",
+              "shortDescription": {
+                "text": "RPC endpoint uses unencrypted transport"
+              },
+              "fullDescription": {
+                "text": "RPC endpoint uses unencrypted transport. Use https:// and wss:// endpoints, or keep the RPC node on a private network."
+              },
+              "help": {
+                "text": "Use https:// and wss:// endpoints, or keep the RPC node on a private network.",
+                "markdown": "# NS-RPC-001: RPC endpoint uses unencrypted transport\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | config | stable | CWE-319 |\n\n## Description\n\nFires for every `HTTPURL`, `WSURL` or `HTTPURLExtraWrite` of an enabled\n`[[EVM]]` chain that uses `http://` or `ws://` to a host on a public network.\n\nHosts considered internal (not flagged): loopback, private and link-local IP\nranges, single-label names such as Docker Compose or Kubernetes service names\n(`geth`), and internal DNS suffixes (`.svc`, `.cluster.local`, `.internal`,\n`.local`, `.lan`, `.home.arpa`).\n\n## Why it matters\n\nThe node trusts its RPC endpoints for chain state and uses them to broadcast\nsigned transactions. Over plaintext, anyone on the network path can read the\ntraffic, including API keys embedded in the URL, and can tamper with responses\n(for example fake block heads or logs) to influence what the node observes and\nreports.\n\n## Vulnerable example\n\n```toml\n[[EVM]]\nChainID = '1'\n\n[[EVM.Nodes]]\nName = 'primary'\nWSURL = 'ws://rpc.example.com/ws'\nHTTPURL = 'http://rpc.example.com'\n```\n\n## Fixed example\n\n```toml\n[[EVM.Nodes]]\nName = 'primary'\nWSURL = 'wss://rpc.example.com/ws'\nHTTPURL = 'https://rpc.example.com'\n```\n\n## Limitations\n\nPlaintext traffic inside a private network is not flagged. It is a smaller but\nreal risk; the node security best practices recommend TLS even behind a VPN.\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#evmnodes\n- https://docs.chain.link/chainlink-nodes/resources/best-security-practices\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-RPC-001.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-319"
+                ]
+              }
+            },
+            {
+              "id": "NS-SEC-001",
+              "name": "SecretSettingInConfigFile",
+              "shortDescription": {
+                "text": "Secret setting in config file"
+              },
+              "fullDescription": {
+                "text": "Secret setting in config file. Move the setting to secrets.toml (or its CL_* environment variable) and rotate the exposed secret."
+              },
+              "help": {
+                "text": "Move the setting to secrets.toml (or its CL_* environment variable) and rotate the exposed secret.",
+                "markdown": "# NS-SEC-001: Secret setting in config file\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | config | stable | CWE-260, CWE-312 |\n\n## Description\n\nFires when a key that belongs to the secrets schema appears in a config file:\n`Database.URL`, `Database.BackupURL`, `Password.Keystore`, `Password.VRF`,\n`WebServer.LDAP.ReadOnlyUserPass`, `WebServer.OIDC.clientSecret`,\n`Prometheus.AuthToken`, `Pyroscope.AuthToken`, `Mercury.Credentials`,\n`Threshold.ThresholdKeyShare`, `CRE.Streams.ApiKey`, `CRE.Streams.ApiSecret`,\n`CRE.LocalSecretOverrides`, `P2PKey`, `DKGRecipientKey`.\n\n## Why it matters\n\nThe node keeps configuration and secrets in separate files so the\nconfiguration can be versioned and shared while secrets stay in a secret store.\nA credential in `config.toml` tends to end up in Git history, CI logs and\nsupport tickets.\n\nThe node decodes config files strictly and **refuses to start** with these\nkeys, so this rule is an early warning: by the time the node complains, the\nsecret may already be committed. Treat it as exposed and rotate it.\n\n## Vulnerable example\n\n```toml\n# config.toml\n[Password]\nKeystore = '...'\n```\n\n## Fixed example\n\n```toml\n# secrets.toml (not committed, mode 0600)\n[Password]\nKeystore = '...'\n```\n\nor set `CL_PASSWORD_KEYSTORE` from a secret manager.\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-SEC-001.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-260",
+                  "CWE-312"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "NS-KS-001",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "InsecureFastScrypt = true makes every keystore use weak scrypt parameters"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "node/config.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "NS-RPC-001",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "EVM chain \"1\" node \"a\": WSURL uses unencrypted ws:// to rpc.example.com"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "node/config.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "NS-DB-002",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "Database.URL connects to db.example.com with sslmode=disable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "node/secrets.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "parse-error",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "invalid YAML"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ops/docker-compose.yml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
