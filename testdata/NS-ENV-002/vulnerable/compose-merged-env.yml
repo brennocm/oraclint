@@ -1,0 +1,8 @@
+x-node-env: &node-env
+  CL_PASSWORD_KEYSTORE: example-keystore-password
+services:
+  chainlink:
+    image: smartcontract/chainlink:2.69.0
+    environment:
+      <<: *node-env
+      LOG_LEVEL: info
