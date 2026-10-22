@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 // Merge combines several config documents the way the node does when it is
 // started with multiple -config flags: later files override earlier ones.
 //
@@ -60,13 +62,20 @@ func matchingElement(elems []*Value, v *Value) int {
 		}
 		for i, e := range elems {
 			other := e.Table[idKey]
-			if other != nil && other.Kind == ScalarValue && other.Scalar == id.Scalar {
+			if other != nil && other.Kind == ScalarValue && sameID(other.Scalar, id.Scalar) {
 				return i
 			}
 		}
 		return -1
 	}
 	return -1
+}
+
+// sameID compares identifiers by their text, so ChainID = 1 and
+// ChainID = '1' are treated as the same chain instead of producing a
+// duplicate one (the node compares chain IDs numerically).
+func sameID(a, b any) bool {
+	return fmt.Sprint(a) == fmt.Sprint(b)
 }
 
 func isTableArray(v *Value) bool {

@@ -77,6 +77,18 @@ ChainID = '137'
 	}
 }
 
+func TestMergeChainIDTypes(t *testing.T) {
+	a := mustParse(t, "a.toml", "[[EVM]]\nChainID = 1\n[[EVM.Nodes]]\nName = 'n'\nHTTPURL = 'http://a.example'\n")
+	b := mustParse(t, "b.toml", "[[EVM]]\nChainID = '1'\n[[EVM.Nodes]]\nName = 'n'\nHTTPURL = 'https://a.example'\n")
+	m := Merge(a, b)
+	if n := len(m.Get("EVM").Items()); n != 1 {
+		t.Fatalf("chains = %d, want 1 (integer and string ChainID are the same chain)", n)
+	}
+	if got := m.Get("EVM").Items()[0].Get("Nodes").Items()[0].Get("HTTPURL").Scalar; got != "https://a.example" {
+		t.Errorf("HTTPURL = %v", got)
+	}
+}
+
 func TestMergeEdgeCases(t *testing.T) {
 	if Merge() != nil {
 		t.Error("Merge() should return nil")
