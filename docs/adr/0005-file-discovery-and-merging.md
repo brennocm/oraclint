@@ -22,7 +22,7 @@ being abusable by a malicious repository (for example in a pull request scan).
 | Compose name | `docker-compose*.y(a)ml`, `compose*.y(a)ml` | strong |
 | Dotenv name | `.env`, `.env.*`, `*.env` (not `.example/.sample/.template/.dist/.tmpl`) | strong |
 | `config.toml`, `*secret*.toml` | | strong (content still decides config vs. secrets) |
-| Other `*.toml` | config if it has a config-only top-level table, secrets if it has a secrets-only table or `Database.URL` | weak |
+| Other `*.toml` | secrets if every key belongs to the secrets schema; otherwise config if it has any top-level table of the config schema | weak |
 | Other `*.y(a)ml` | Kubernetes if a document has `apiVersion` and `kind` | weak |
 | `--config/--secrets/--compose/--k8s/--env` flags | any file name | strong |
 
@@ -47,6 +47,13 @@ node's semantics: later files override earlier ones, `[[EVM]]` entries merge by
 `EVMConfigs.SetFrom` / `EVMNodes.SetFrom`). Each value keeps the location of the
 file that set it. Config files discovered in a directory are analyzed
 independently, because oraclint cannot know which ones a node loads together.
+
+*Amended 2026-10-22:* the first version classified a TOML file as config only
+when it had a table that exists exclusively in the config schema. The
+end-to-end tests showed that a minimal `config.toml` containing only
+`[WebServer]` (a table both schemas share) was silently skipped, a false
+negative. Classification now compares every key path with the secrets schema
+instead.
 
 ## Alternatives considered
 
