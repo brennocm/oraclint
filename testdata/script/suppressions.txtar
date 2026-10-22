@@ -1,0 +1,55 @@
+# An inline directive with a reason suppresses the finding: exit 0, and the
+# JSON output keeps it marked as suppressed.
+exitcode 0 oraclint scan inline
+stdout 'No issues found in 1 file \(1 suppressed\)'
+exitcode 0 oraclint scan --format json inline
+stdout '"kind": "inline"'
+stdout '"reason": "TLS terminated at the load balancer"'
+
+# Without a reason the directive is ignored and reported (info).
+exitcode 1 oraclint scan noreason
+stdout NS-WEB-001
+stdout 'invalid-suppression'
+
+# Unknown rule IDs in a directive are reported too.
+exitcode 1 oraclint scan unknownid
+stdout 'names unknown rule "NS-NOPE-001"'
+
+# .oraclint.yaml in the working directory: disable and path-scoped ignore.
+cd withconfig
+exitcode 0 oraclint scan .
+stdout '\(1 suppressed\)'
+exitcode 0 oraclint scan --format sarif .
+stdout '"kind": "external"'
+cd ..
+
+# A config entry without a reason is a usage error.
+exitcode 2 oraclint scan --config-file bad.yaml inline
+stderr 'reason is required'
+
+-- inline/config.toml --
+[WebServer.TLS]
+# oraclint:ignore NS-WEB-001 reason="TLS terminated at the load balancer"
+HTTPSPort = 0
+-- noreason/config.toml --
+[WebServer.TLS]
+HTTPSPort = 0 # oraclint:ignore NS-WEB-001
+-- unknownid/config.toml --
+[WebServer.TLS]
+HTTPSPort = 0 # oraclint:ignore NS-NOPE-001 reason="typo"
+-- withconfig/.oraclint.yaml --
+disable:
+  - rule: NS-LOG-001
+    reason: "debug logs are required on this lab node"
+ignore:
+  - rule: NS-WEB-001
+    paths: ["staging/**"]
+    reason: "TLS terminated at the staging load balancer"
+-- withconfig/staging/config.toml --
+[Log]
+Level = 'debug'
+[WebServer.TLS]
+HTTPSPort = 0
+-- bad.yaml --
+disable:
+  - rule: NS-LOG-001

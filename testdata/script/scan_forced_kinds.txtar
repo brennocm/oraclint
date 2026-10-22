@@ -1,0 +1,23 @@
+# Files with unusual names can be classified explicitly, and several config
+# files are merged like the node does (later files win).
+exitcode 1 oraclint scan --config base.toml --config prod.toml --secrets node-creds --compose stack.yml
+stdout 'prod.toml'
+stdout 'NS-WEB-003'
+! stdout 'base.toml'
+stdout 'NS-KS-002'
+stdout 'NS-DKR-001'
+
+-- base.toml --
+[WebServer]
+AllowOrigins = 'https://node.example.com'
+-- prod.toml --
+[WebServer]
+AllowOrigins = '*'
+-- node-creds --
+[Password]
+Keystore = 'short'
+-- stack.yml --
+services:
+  chainlink:
+    image: smartcontract/chainlink:2.69.0
+    ports: ["6688:6688"]
