@@ -1,0 +1,7 @@
+[[EVM]]
+ChainID = '1'
+
+[[EVM.Nodes]]
+Name = 'primary'
+WSURL = 'ws://rpc.example.com/ws'
+HTTPURL = 'https://rpc.example.com'
