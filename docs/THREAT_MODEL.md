@@ -41,7 +41,7 @@ process changes.
 | Compromised CI workflow or third-party Action | Elevation of privilege | Every third-party Action is pinned by commit SHA; workflows default to `contents: read` and grant extra permissions per job; checkout without persisted credentials. |
 | Tampered release artifacts | Spoofing / tampering | GoReleaser builds in GitHub Actions; checksums signed keylessly with cosign (Sigstore, tied to the workflow identity); SBOMs generated with syft; build provenance attestations via `actions/attest-build-provenance`; distroless non-root container image. Verification steps are in the README. |
 | Network exfiltration from the scanner | Information disclosure | oraclint makes no network calls during a scan. `net/http` and `crypto/tls` are not linked into the binary (`go list -deps`); the `net` package is used only to parse IP addresses and host:port strings. |
-| Report files readable by other local users | Information disclosure | `--output` files are created with mode `0600`. |
+| Report written over another file | Tampering | `--output` refuses to write through a symbolic link, so a scanned pull request cannot plant the output name as a link to another file. Report files use the normal mode (`0644` minus umask): they are redacted, and in the GitHub Action they must be readable by the runner user that uploads them (the scan itself runs as root). |
 
 ## Residual risks (accepted)
 

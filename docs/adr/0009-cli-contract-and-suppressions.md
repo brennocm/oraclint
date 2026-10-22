@@ -49,15 +49,20 @@ unreadable node file fails CI instead of passing silently.
 **Output**
 
 Reports are rendered in memory and then written, so a failure never leaves a
-truncated file; `--output` files are created with mode `0600` because a report
-maps the weak spots of a deployment. Colors are used only on a terminal and
-respect `NO_COLOR` and `--no-color`.
+truncated file; `--output` never writes through a symbolic link. Colors are
+used only on a terminal and respect `NO_COLOR` and `--no-color`.
 
 *Amended 2026-10-22:* scanned content can bring its own `.oraclint.yaml` and
 directives, so a pull request could silence rules for itself. Rules disabled
 by the config are now listed in every output format, and
 `--ignore-suppressions` (Action input `ignore-suppressions`) ignores both the
 config file and inline directives for untrusted content.
+
+*Amended 2026-10-22 (first CI run):* report files were created with mode
+`0600`. In the GitHub Action the scan runs as root (a GitHub requirement for
+Docker actions) and later steps run as the runner user, so the SARIF file was
+unreadable to the upload step. Reports are redacted, so they now use the
+normal file mode (`0644` minus umask).
 
 *Amended 2026-10-22 (second review):* there was no way to leave paths out of
 a scan, so fixtures and intentionally unparsable files produced findings that
