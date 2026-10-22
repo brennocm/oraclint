@@ -25,6 +25,14 @@ jobs:
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.15.0
+      - name: Lint workflows and action metadata
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - name: Check GoReleaser configuration
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: v2.18.3
+          args: check
 
   test:
     runs-on: ubuntu-latest
@@ -39,6 +47,8 @@ jobs:
         run: make test-race
       - name: Coverage
         run: make cover
+      - name: Coverage threshold (core packages >= 80%)
+        run: make cover-check
 
   vuln:
     runs-on: ubuntu-latest
