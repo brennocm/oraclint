@@ -1,0 +1,31 @@
+# Deliberately insecure Kubernetes manifests (fake values). Do not use.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: chainlink
+spec:
+  serviceName: chainlink
+  selector:
+    matchLabels: {app: chainlink}
+  template:
+    metadata:
+      labels: {app: chainlink}
+    spec:
+      hostNetwork: true
+      containers:
+        - name: node
+          image: smartcontract/chainlink
+          env:
+            - name: CL_PASSWORD_KEYSTORE
+              value: changeme
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chainlink-ui
+spec:
+  type: LoadBalancer
+  selector: {app: chainlink}
+  ports:
+    - port: 6688
+      targetPort: 6688

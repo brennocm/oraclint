@@ -1,0 +1,21 @@
+# Deliberately insecure compose file (fake values). Do not use.
+services:
+  chainlink:
+    image: smartcontract/chainlink:latest
+    user: root
+    privileged: true
+    command: node -config /chainlink/config.toml -secrets /chainlink/secrets.toml start
+    ports:
+      - "6688:6688"
+    environment:
+      CL_PASSWORD_KEYSTORE: changeme
+      CL_DATABASE_ALLOW_SIMPLE_PASSWORDS: "true"
+    volumes:
+      - ./:/chainlink
+
+  postgres:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=example-db-password-123
