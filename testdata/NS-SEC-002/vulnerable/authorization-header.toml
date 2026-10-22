@@ -1,0 +1,4 @@
+[AuditLogger]
+Enabled = true
+ForwardToUrl = 'https://audit.example.com/events'
+Headers = ['Authorization: Bearer example-token-123', 'X-Env: prod']

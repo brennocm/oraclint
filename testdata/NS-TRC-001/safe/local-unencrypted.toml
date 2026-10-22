@@ -1,0 +1,4 @@
+[Tracing]
+Enabled = true
+Mode = 'unencrypted'
+CollectorTarget = 'localhost:4317'

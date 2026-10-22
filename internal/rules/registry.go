@@ -12,6 +12,12 @@ import (
 // one-line change in review.
 func All() []Rule {
 	all := []Rule{
+		auditHeaderSecret{},
+		auditPlaintext{},
+		dbLogQueries{},
+		logDebug{},
+		telemetryInsecure{},
+		tracingUnencrypted{},
 		dbTLSDisabled{},
 		insecureFlags{},
 		ksFastScrypt{},

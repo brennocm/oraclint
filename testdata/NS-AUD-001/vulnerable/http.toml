@@ -1,0 +1,3 @@
+[AuditLogger]
+Enabled = true
+ForwardToUrl = 'http://audit.example.com/events'
