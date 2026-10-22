@@ -57,6 +57,9 @@ func writeText(w io.Writer, rep Report, opts Options) error {
 
 	currentFile := ""
 	for _, f := range rep.Findings {
+		if f.Suppression != nil {
+			continue // listed in JSON/SARIF; only counted here
+		}
 		if f.Location.File != currentFile {
 			if currentFile != "" {
 				tw.printf("\n")
@@ -77,20 +80,29 @@ func writeText(w io.Writer, rep Report, opts Options) error {
 		tw.printf("  %s\n", tw.paint(ansiDim, "        fix: "+f.Remediation))
 	}
 
-	c := countBySeverity(rep.Findings)
-	if c.Total() == 0 {
-		tw.printf("%s No issues found in %s.\n", tw.paint(ansiBold, "✓"), plural(rep.FilesScanned, "file"))
-	} else {
-		tw.printf("\n")
-		tw.printf("%s in %s: %d critical, %d high, %d medium, %d low, %d info\n",
-			tw.paint(ansiBold, plural(c.Total(), "finding")), plural(rep.FilesScanned, "file"),
-			c.Critical, c.High, c.Medium, c.Low, c.Info)
+	if !opts.Quiet {
+		writeSummary(tw, rep)
 	}
 
 	if tw.err != nil {
 		return tw.err
 	}
 	return tw.w.Flush()
+}
+
+func writeSummary(tw *textWriter, rep Report) {
+	c := countBySeverity(rep.Findings)
+	suppressed := ""
+	if n := countSuppressed(rep.Findings); n > 0 {
+		suppressed = fmt.Sprintf(" (%d suppressed)", n)
+	}
+	if c.Total() == 0 {
+		tw.printf("%s No issues found in %s%s.\n", tw.paint(ansiBold, "✓"), plural(rep.FilesScanned, "file"), suppressed)
+		return
+	}
+	tw.printf("\n%s in %s: %d critical, %d high, %d medium, %d low, %d info%s\n",
+		tw.paint(ansiBold, plural(c.Total(), "finding")), plural(rep.FilesScanned, "file"),
+		c.Critical, c.High, c.Medium, c.Low, c.Info, suppressed)
 }
 
 func plural(n int, word string) string {
