@@ -14,6 +14,7 @@ func All() []Rule {
 	all := []Rule{
 		insecureFlags{},
 		ksFastScrypt{},
+		rpcPlaintext{},
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].Metadata().ID < all[j].Metadata().ID })
 	return all
