@@ -1,0 +1,54 @@
+# Deliberately insecure node configuration (fake values). Do not use.
+InsecureFastScrypt = true
+
+[Log]
+Level = 'debug'
+
+[Database]
+LogQueries = true
+
+[Password]
+Keystore = 'misplaced-keystore-password'
+
+[WebServer]
+AllowOrigins = '*'
+SecureCookies = false
+SessionTimeout = '24h'
+AuthenticationMethod = 'ldap'
+
+[WebServer.LDAP]
+ServerTLS = false
+BaseDN = 'dc=example,dc=com'
+
+[WebServer.RateLimit]
+Unauthenticated = 100
+UnauthenticatedPeriod = '1m'
+
+[WebServer.TLS]
+HTTPSPort = 0
+
+[Insecure]
+DevWebServer = true
+
+[Tracing]
+Enabled = true
+Mode = 'unencrypted'
+CollectorTarget = 'otel.example.com:4317'
+
+[Telemetry]
+Enabled = true
+Endpoint = 'telemetry.example.com:4317'
+InsecureConnection = true
+
+[AuditLogger]
+Enabled = true
+ForwardToUrl = 'http://audit.example.com/events'
+Headers = ['Authorization: Bearer example-audit-token']
+
+[[EVM]]
+ChainID = '1'
+
+[[EVM.Nodes]]
+Name = 'mainnet-infura'
+WSURL = 'ws://mainnet.example-rpc.com/ws/v3/0123456789abcdef0123456789abcdef'
+HTTPURL = 'http://mainnet.example-rpc.com/v3/0123456789abcdef0123456789abcdef'

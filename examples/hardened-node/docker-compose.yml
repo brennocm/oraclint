@@ -1,0 +1,16 @@
+# Hardened compose file. Secrets come from the host environment or a secret store.
+services:
+  chainlink:
+    image: smartcontract/chainlink:2.69.0
+    command: node -config /chainlink/config.toml -secrets /run/secrets/secrets.toml start
+    ports:
+      - "127.0.0.1:6689:6689"
+    cap_drop: [ALL]
+    secrets:
+      - secrets.toml
+    volumes:
+      - ./config.toml:/chainlink/config.toml:ro
+
+secrets:
+  secrets.toml:
+    file: ./secrets.toml
