@@ -1,0 +1,56 @@
+# Runs the repository's own GitHub Action against the example deployments:
+# the insecure one must produce findings (uploaded to code scanning), the
+# hardened one must pass.
+name: Action self-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Scan the insecure example (report only)
+        uses: ./
+        with:
+          path: examples/insecure-node
+          output: insecure.sarif
+          fail-on: none
+          experimental: "true"
+
+      - name: The insecure example must have findings
+        run: |
+          count=$(jq '.runs[0].results | length' insecure.sarif)
+          echo "results: $count"
+          test "$count" -gt 30
+
+      - name: Upload SARIF to code scanning
+        if: github.event_name == 'push'
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: insecure.sarif
+          category: oraclint-selftest
+
+      - name: Restrict the hardened example's secrets file
+        run: chmod 600 examples/hardened-node/secrets.toml
+
+      - name: Scan the hardened example (must pass)
+        uses: ./
+        with:
+          path: examples/hardened-node
+          format: text
+          output: ""
+          fail-on: info
+          experimental: "true"
