@@ -18,7 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   multiple `--config` files.
 - Inline (`# oraclint:ignore ID reason="..."`) and `.oraclint.yaml`
   suppressions with mandatory reasons, reported as suppressed in JSON and SARIF.
-- Secret redaction across all outputs, enforced by a fuzz test.
+- `--ignore-suppressions` audit mode (Action input `ignore-suppressions`) for
+  untrusted content; rules disabled by `.oraclint.yaml` are listed in every
+  output format.
+- Secret redaction across all outputs, enforced by a fuzz test; control
+  characters and bidirectional overrides from scanned files are escaped.
+- YAML merge keys (`<<: *anchor`) are followed and duplicate keys reported.
 - Exit codes 0 (clean), 1 (findings at or above `--fail-on`), 2 (error).
 - GitHub Action, multi-arch container image, signed release archives with
   SBOMs and build provenance.
