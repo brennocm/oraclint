@@ -218,6 +218,23 @@ func TestSARIFContent(t *testing.T) {
 	}
 }
 
+func TestArtifactFor(t *testing.T) {
+	tests := []struct {
+		base, file, uri, baseID string
+	}{
+		{"/repo", "node/config.toml", "node/config.toml", "%SRCROOT%"},
+		{"/repo", "/repo/my dir/config.toml", "my%20dir/config.toml", "%SRCROOT%"},
+		{"/repo", "/etc/chainlink/config.toml", "file:///etc/chainlink/config.toml", ""},
+		{"/repo", "a:b/config.toml", "./a:b/config.toml", "%SRCROOT%"},
+	}
+	for _, tc := range tests {
+		got := artifactFor(filepath.FromSlash(tc.base), tc.file)
+		if got.URI != tc.uri || got.URIBaseID != tc.baseID {
+			t.Errorf("artifactFor(%q) = %+v, want %q %q", tc.file, got, tc.uri, tc.baseID)
+		}
+	}
+}
+
 func TestHelpers(t *testing.T) {
 	if got := ruleName("RPC endpoint uses un-encrypted transport"); got != "RpcEndpointUsesUnEncryptedTransport" {
 		t.Errorf("ruleName = %q", got)
