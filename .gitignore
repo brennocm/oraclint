@@ -1,0 +1,19 @@
+# Build output
+/bin/
+/dist/
+*.exe
+*.test
+
+# Coverage and profiling
+coverage.out
+*.prof
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Local notes and assistant files (not part of the project)
+CLAUDE.md
+ideias.md
+project.md
