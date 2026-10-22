@@ -1,12 +1,14 @@
-package engine
+package report
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/brennocm/oraclint/internal/engine"
 	"github.com/brennocm/oraclint/internal/loader"
 	"github.com/brennocm/oraclint/internal/model"
 	"github.com/brennocm/oraclint/internal/rules"
@@ -53,10 +55,12 @@ func dumpStrings(t *model.Target) string {
 	return strings.Join(parts, " ")
 }
 
-// FuzzNoSecretInFindings writes a deployment containing random secrets, runs
+// FuzzNoSecretInOutput writes a deployment containing random secrets, runs
 // the full loader + engine pipeline with every rule (plus a deliberately leaky
-// one) and checks that no secret appears in any finding.
-func FuzzNoSecretInFindings(f *testing.F) {
+// copy of each rule) and renders every output format. No secret may appear in
+// any of them. This is the executable form of the redaction invariant in
+// docs/THREAT_MODEL.md.
+func FuzzNoSecretInOutput(f *testing.F) {
 	f.Add("Keystore0Password1x", "dbPassword2345", "0123456789abcdef0123456789abcdef", "vrfPass987654")
 	f.Fuzz(func(t *testing.T, keystore, dbPass, rpcKey, vrf string) {
 		for _, s := range []string{keystore, dbPass, rpcKey, vrf} {
@@ -86,15 +90,19 @@ func FuzzNoSecretInFindings(f *testing.F) {
 		for _, r := range rules.All() {
 			all = append(all, leakyRule{inner: r})
 		}
-		findings := Run(res.Targets, res.Problems, all, Options{Experimental: true})
+		findings := engine.Run(res.Targets, res.Problems, all, engine.Options{Experimental: true})
 		if len(findings) == 0 {
 			t.Fatal("expected findings from the vulnerable deployment")
 		}
-		for _, fd := range findings {
-			text := fd.Message + fd.Title + fd.Remediation + fd.Location.String()
+		rep := Report{ToolVersion: "fuzz", Rules: allMetadata(), Findings: findings, FilesScanned: len(res.Targets)}
+		for _, format := range []string{FormatText, FormatJSON, FormatSARIF} {
+			var buf bytes.Buffer
+			if err := Write(&buf, format, rep, Options{Color: true}); err != nil {
+				t.Fatal(err)
+			}
 			for _, s := range []string{keystore, dbPass, rpcKey, vrf} {
-				if strings.Contains(text, s) {
-					t.Fatalf("secret %q leaked in %s: %q", s, fd.RuleID, text)
+				if strings.Contains(buf.String(), s) {
+					t.Fatalf("secret %q leaked in %s output", s, format)
 				}
 			}
 		}
