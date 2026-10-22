@@ -33,10 +33,11 @@ func (r dbTLSDisabled) Check(t *model.Target) []Finding {
 			continue
 		}
 		raw, _ := v.Scalar.(string)
-		host, sslmode, ok := postgresHostAndSSLMode(raw)
+		host, params, ok := postgresTarget(raw)
 		if !ok || isInternalHost(host) {
 			continue
 		}
+		sslmode := strings.ToLower(params.Get("sslmode"))
 		if sslmode == "disable" || sslmode == "allow" {
 			out = append(out, newFinding(r.Metadata(), v.Loc,
 				"%s connects to %s with sslmode=%s, sending credentials and node data in cleartext", key, host, sslmode))
@@ -45,19 +46,19 @@ func (r dbTLSDisabled) Check(t *model.Target) []Finding {
 	return out
 }
 
-// postgresHostAndSSLMode extracts the target host and sslmode from a
+// postgresTarget extracts the target host and the query parameters from a
 // postgres:// URL. A host given as a query parameter starting with "/" is a
 // Unix socket and reported as "" (internal). ok is false for anything that is
 // not a parsable postgres URL.
-func postgresHostAndSSLMode(raw string) (host, sslmode string, ok bool) {
+func postgresTarget(raw string) (host string, params url.Values, ok bool) {
 	// url.Parse directly, not parseURL: "postgresql://u:p@/db?host=..." has
 	// an empty authority host and is still valid.
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil {
-		return "", "", false
+		return "", nil, false
 	}
 	if s := strings.ToLower(u.Scheme); s != "postgres" && s != "postgresql" {
-		return "", "", false
+		return "", nil, false
 	}
 	q := u.Query()
 	host = u.Hostname()
@@ -67,5 +68,5 @@ func postgresHostAndSSLMode(raw string) (host, sslmode string, ok bool) {
 			host = ""
 		}
 	}
-	return host, strings.ToLower(q.Get("sslmode")), true
+	return host, q, true
 }

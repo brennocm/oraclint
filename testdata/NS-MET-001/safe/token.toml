@@ -1,0 +1,5 @@
+[Password]
+Keystore = 'aK3v-9mQ2-xR7t-Lp4w-Zc8n'
+
+[Prometheus]
+AuthToken = 'example-prometheus-token'
