@@ -1,0 +1,4 @@
+[Telemetry]
+Enabled = true
+Endpoint = 'telemetry.example.com:4317'
+CACertFile = '/certs/telemetry-ca.pem'

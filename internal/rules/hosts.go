@@ -58,3 +58,19 @@ func parseURL(raw string) (*url.URL, bool) {
 	}
 	return u, true
 }
+
+// endpointHost extracts the host from an endpoint written either as a URL
+// ("https://collector:4317") or as "host:port" (the OTEL collector format).
+func endpointHost(endpoint string) string {
+	endpoint = strings.TrimSpace(endpoint)
+	if strings.Contains(endpoint, "://") {
+		if u, ok := parseURL(endpoint); ok {
+			return u.Hostname()
+		}
+		return ""
+	}
+	if host, _, err := net.SplitHostPort(endpoint); err == nil {
+		return host
+	}
+	return strings.Trim(strings.SplitN(endpoint, "/", 2)[0], "[]")
+}

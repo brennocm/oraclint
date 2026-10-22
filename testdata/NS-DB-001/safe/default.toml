@@ -1,0 +1,3 @@
+[Database]
+MaxIdleConns = 10
+MaxOpenConns = 100

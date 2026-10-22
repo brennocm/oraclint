@@ -34,6 +34,60 @@
               }
             },
             {
+              "id": "NS-AUD-001",
+              "name": "AuditLogsForwardedOverPlaintext",
+              "shortDescription": {
+                "text": "Audit logs forwarded over plaintext"
+              },
+              "fullDescription": {
+                "text": "Audit logs forwarded over plaintext. Use an https:// AuditLogger.ForwardToUrl, or forward to a collector on a private network."
+              },
+              "help": {
+                "text": "Use an https:// AuditLogger.ForwardToUrl, or forward to a collector on a private network.",
+                "markdown": "# NS-AUD-001: Audit logs forwarded over plaintext\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| low | config | stable | CWE-319 |\n\n## Description\n\nFires when `AuditLogger.Enabled = true` and `AuditLogger.ForwardToUrl` uses\n`http://` to a non-internal host.\n\n## Why it matters\n\nAudit events record security-relevant operator actions. Sent over plaintext\nthey can be read, and an attacker on the path can drop or alter them, which\nundermines the point of an audit trail. Any `AuditLogger.Headers` (often an\nauthorization token) travel in cleartext too.\n\n## Vulnerable example\n\n```toml\n[AuditLogger]\nEnabled = true\nForwardToUrl = 'http://audit.example.com/events'\n```\n\n## Fixed example\n\n```toml\n[AuditLogger]\nEnabled = true\nForwardToUrl = 'https://audit.example.com/events'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#auditlogger\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-AUD-001.md",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "security-severity": "3.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-319"
+                ]
+              }
+            },
+            {
+              "id": "NS-DB-001",
+              "name": "SqlQueryLoggingEnabled",
+              "shortDescription": {
+                "text": "SQL query logging enabled"
+              },
+              "fullDescription": {
+                "text": "SQL query logging enabled. Remove Database.LogQueries (default false); use Postgres statement logging on the database side if needed."
+              },
+              "help": {
+                "text": "Remove Database.LogQueries (default false); use Postgres statement logging on the database side if needed.",
+                "markdown": "# NS-DB-001: SQL query logging enabled\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | config | stable | CWE-532 |\n\n## Description\n\nFires when `Database.LogQueries = true` (default `false`).\n\n## Why it matters\n\nThe node then logs the SQL statements it runs (at debug level). Statements can\ncontain job specs, bridge configuration and other data that should not be\ncopied into log storage. The node documentation itself recommends enabling\nstatement logging on Postgres instead when a full SQL log is needed.\n\n## Vulnerable example\n\n```toml\n[Database]\nLogQueries = true\n```\n\n## Fixed example\n\n```toml\n[Database]\n# LogQueries removed (defaults to false)\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#logqueries\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-DB-001.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-532"
+                ]
+              }
+            },
+            {
               "id": "NS-DB-002",
               "name": "PostgresConnectionToRemoteHostWithoutTls",
               "shortDescription": {
@@ -115,6 +169,33 @@
               }
             },
             {
+              "id": "NS-LOG-001",
+              "name": "DebugLogLevel",
+              "shortDescription": {
+                "text": "Debug log level"
+              },
+              "fullDescription": {
+                "text": "Debug log level. Use Log.Level = 'info' (the default) or higher in production; enable debug temporarily when investigating."
+              },
+              "help": {
+                "text": "Use Log.Level = 'info' (the default) or higher in production; enable debug temporarily when investigating.",
+                "markdown": "# NS-LOG-001: Debug log level\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| low | config | stable | CWE-532 |\n\n## Description\n\nFires when `Log.Level = 'debug'` (default `info`, case-insensitive).\n\n## Why it matters\n\nDebug logs record far more detail about requests, job runs and internal state\nthan production needs. Logs are commonly shipped to third-party systems with\nwider access than the node itself, and the extra volume makes real errors\nharder to spot. `Log.Level` controls console output only; file logging has its\nown settings.\n\n## Vulnerable example\n\n```toml\n[Log]\nLevel = 'debug'\n```\n\n## Fixed example\n\n```toml\n[Log]\nLevel = 'info'\nJSONConsole = true\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#log\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-LOG-001.md",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "security-severity": "3.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-532"
+                ]
+              }
+            },
+            {
               "id": "NS-RPC-001",
               "name": "RpcEndpointUsesUnencryptedTransport",
               "shortDescription": {
@@ -166,6 +247,87 @@
                   "config",
                   "CWE-260",
                   "CWE-312"
+                ]
+              }
+            },
+            {
+              "id": "NS-SEC-002",
+              "name": "CredentialInAuditloggerHeaders",
+              "shortDescription": {
+                "text": "Credential in AuditLogger headers"
+              },
+              "fullDescription": {
+                "text": "Credential in AuditLogger headers. Keep the file that sets AuditLogger.Headers out of version control (for example inject it with CL_CONFIG from a secret store) and rotate the credential."
+              },
+              "help": {
+                "text": "Keep the file that sets AuditLogger.Headers out of version control (for example inject it with CL_CONFIG from a secret store) and rotate the credential.",
+                "markdown": "# NS-SEC-002: Credential in AuditLogger headers\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | config | stable | CWE-260 |\n\n## Description\n\nFires for each `AuditLogger.Headers` entry whose header name looks like a\ncredential (`Authorization`, `*Token*`, `*Api-Key*`, `*Secret*`, `Cookie`,\n`*Password*`) and has a value.\n\n## Why it matters\n\n`AuditLogger.Headers` is part of the config schema and has no `secrets.toml`\nequivalent, so the credential for the audit endpoint ends up in the config\nfile, which is usually committed and shared. Anyone with read access to the\nrepository can then write fake events into, or read from, the audit system.\n\n## Vulnerable example\n\n```toml\n[AuditLogger]\nHeaders = ['Authorization: Bearer \u003ctoken\u003e']\n```\n\n## Fixed example\n\nKeep the `[AuditLogger]` section in a separate config file that is not\ncommitted, or pass it through the `CL_CONFIG` environment variable (the node\napplies it last) from a secret manager. Rotate a token that was committed.\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#headers\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-SEC-002.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-260"
+                ]
+              }
+            },
+            {
+              "id": "NS-TEL-001",
+              "name": "TelemetryOverAnInsecureConnection",
+              "shortDescription": {
+                "text": "Telemetry over an insecure connection"
+              },
+              "fullDescription": {
+                "text": "Telemetry over an insecure connection. Remove InsecureConnection / ChipIngressInsecureConnection and configure Telemetry.CACertFile."
+              },
+              "help": {
+                "text": "Remove InsecureConnection / ChipIngressInsecureConnection and configure Telemetry.CACertFile.",
+                "markdown": "# NS-TEL-001: Telemetry over an insecure connection\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | config | stable | CWE-319 |\n\n## Description\n\nFires when:\n\n- `Telemetry.Enabled = true` and `Telemetry.InsecureConnection = true` (default\n  `false`) with a non-internal `Telemetry.Endpoint`; or\n- `Telemetry.ChipIngressInsecureConnection = true` (default `false`) with a\n  non-internal `Telemetry.ChipIngressEndpoint`.\n\n## Why it matters\n\nTelemetry and CHIP ingress events carry operational data about the node and\nthe jobs it runs. The documentation says `InsecureConnection` is \"only\navailable in dev mode\", but the node does not enforce this in v2.69.0\n(`Telemetry.ValidateConfig` only skips the `CACertFile` requirement).\n\n## Vulnerable example\n\n```toml\n[Telemetry]\nEnabled = true\nEndpoint = 'telemetry.example.com:4317'\nInsecureConnection = true\n```\n\n## Fixed example\n\n```toml\n[Telemetry]\nEnabled = true\nEndpoint = 'telemetry.example.com:4317'\nCACertFile = '/certs/telemetry-ca.pem'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#telemetry\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/core/config/toml/types.go\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-TEL-001.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-319"
+                ]
+              }
+            },
+            {
+              "id": "NS-TRC-001",
+              "name": "TracesExportedUnencryptedToARemoteCollector",
+              "shortDescription": {
+                "text": "Traces exported unencrypted to a remote collector"
+              },
+              "fullDescription": {
+                "text": "Traces exported unencrypted to a remote collector. Use Tracing.Mode = 'tls' with Tracing.TLSCertPath, or send traces to a collector on the same host or private network."
+              },
+              "help": {
+                "text": "Use Tracing.Mode = 'tls' with Tracing.TLSCertPath, or send traces to a collector on the same host or private network.",
+                "markdown": "# NS-TRC-001: Traces exported unencrypted to a remote collector\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | config | stable | CWE-319 |\n\n## Description\n\nFires when `Tracing.Enabled = true`, `Tracing.Mode = 'unencrypted'` (default\n`tls`) and `Tracing.CollectorTarget` is not a loopback, private or internal\nhost (see NS-RPC-001 for the definition).\n\n## Why it matters\n\nTraces describe what the node is doing (job runs, external calls, timings)\nand are sent continuously. The node intends unencrypted traces only for local\ncollectors (\"Unencrypted traces can not be sent to external networks\"), but in\nv2.69.0 its check (`isValidLocalURI`) only verifies that the target is a\nsyntactically valid `host:port`, so a public collector is accepted.\n\n## Vulnerable example\n\n```toml\n[Tracing]\nEnabled = true\nMode = 'unencrypted'\nCollectorTarget = 'otel.example.com:4317'\n```\n\n## Fixed example\n\n```toml\n[Tracing]\nEnabled = true\nMode = 'tls'\nCollectorTarget = 'otel.example.com:4317'\nTLSCertPath = '/certs/otel.pem'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#tracing\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/core/config/toml/types.go\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-TRC-001.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "config",
+                  "CWE-319"
                 ]
               }
             },
@@ -365,7 +527,7 @@
       "results": [
         {
           "ruleId": "NS-KS-001",
-          "ruleIndex": 3,
+          "ruleIndex": 5,
           "level": "error",
           "message": {
             "text": "InsecureFastScrypt = true makes every keystore use weak scrypt parameters"
@@ -387,7 +549,7 @@
         },
         {
           "ruleId": "NS-RPC-001",
-          "ruleIndex": 4,
+          "ruleIndex": 7,
           "level": "error",
           "message": {
             "text": "EVM chain \"1\" node \"a\": WSURL uses unencrypted ws:// to rpc.example.com"
@@ -409,7 +571,7 @@
         },
         {
           "ruleId": "NS-DB-002",
-          "ruleIndex": 1,
+          "ruleIndex": 3,
           "level": "error",
           "message": {
             "text": "Database.URL connects to db.example.com with sslmode=disable"
