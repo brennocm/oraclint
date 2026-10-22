@@ -93,7 +93,24 @@ type Finding struct {
 	Message     string
 	Location    model.Location
 	Remediation string
+	// Suppression is set when the finding was suppressed. Suppressed
+	// findings are kept (and shown as such in JSON and SARIF) rather than
+	// dropped, so suppressions stay reviewable.
+	Suppression *Suppression
 }
+
+// Suppression records why a finding was suppressed.
+type Suppression struct {
+	Kind   string // SuppressionInline or SuppressionConfig
+	Reason string
+	Source model.Location // the directive or config entry
+}
+
+// Suppression kinds.
+const (
+	SuppressionInline = "inline"
+	SuppressionConfig = "config"
+)
 
 // Rule is implemented by every check. The interface is deliberately small:
 // static metadata plus a pure check function.
@@ -111,6 +128,16 @@ var ParseError = Metadata{
 	Severity:    SeverityHigh,
 	Status:      Stable,
 	Remediation: "Fix the file so it parses, or exclude it from the scan.",
+}
+
+// InvalidSuppression describes the pseudo rule reported for an
+// "oraclint:ignore" directive that cannot be honored (no reason, unknown rule).
+var InvalidSuppression = Metadata{
+	ID:          "invalid-suppression",
+	Title:       "Invalid suppression directive",
+	Severity:    SeverityInfo,
+	Status:      Stable,
+	Remediation: `Use "# oraclint:ignore RULE-ID reason=\"why this is acceptable\"" with an existing rule ID.`,
 }
 
 // newFinding fills the rule-level fields of a Finding from its metadata.
