@@ -12,9 +12,3 @@ coverage.out
 .idea/
 .vscode/
 .DS_Store
-
-# Local notes and assistant files (not part of the project)
-CLAUDE.md
-ideias.md
-project.md
-study.md
