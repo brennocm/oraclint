@@ -130,6 +130,17 @@ var ParseError = Metadata{
 	Remediation: "Fix the file so it parses, or exclude it from the scan.",
 }
 
+// InternalError describes the pseudo rule reported when a rule fails (a bug
+// in oraclint). It is high severity so the build fails instead of passing
+// with a silently skipped check.
+var InternalError = Metadata{
+	ID:          "internal-error",
+	Title:       "Rule failed",
+	Severity:    SeverityHigh,
+	Status:      Stable,
+	Remediation: "This is a bug in oraclint; please report it with the oraclint version (do not include secrets).",
+}
+
 // InvalidSuppression describes the pseudo rule reported for an
 // "oraclint:ignore" directive that cannot be honored (no reason, unknown rule).
 var InvalidSuppression = Metadata{

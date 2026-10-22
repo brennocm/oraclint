@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/brennocm/oraclint/internal/model"
@@ -120,5 +121,25 @@ func TestSortTieBreakers(t *testing.T) {
 	}
 	if got != "Ca Az Bw Bx " {
 		t.Errorf("order = %q", got)
+	}
+}
+
+type panickyRule struct{ fakeRule }
+
+func (panickyRule) Check(*model.Target) []rules.Finding {
+	panic("secret-value-in-panic")
+}
+
+func TestRuleCrashIsContained(t *testing.T) {
+	all := []rules.Rule{
+		panickyRule{fakeRule{"NS-P-001", rules.SeverityLow, rules.Stable, model.KindConfig, 1}},
+		fakeRule{"NS-OK-001", rules.SeverityLow, rules.Stable, model.KindConfig, 2},
+	}
+	got := Run([]*model.Target{{Kind: model.KindConfig, Path: "c.toml"}}, nil, all, Options{})
+	if fmt.Sprint(ids(got)) != "[internal-error@c.toml:0 NS-OK-001@c.toml:2]" {
+		t.Fatalf("findings = %v", ids(got))
+	}
+	if got[0].Severity != rules.SeverityHigh || !strings.Contains(got[0].Message, "NS-P-001") || strings.Contains(got[0].Message, "secret-value") {
+		t.Errorf("internal error finding = %+v", got[0])
 	}
 }

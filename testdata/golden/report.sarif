@@ -58,6 +58,30 @@
               }
             },
             {
+              "id": "internal-error",
+              "name": "RuleFailed",
+              "shortDescription": {
+                "text": "Rule failed"
+              },
+              "fullDescription": {
+                "text": "Rule failed. This is a bug in oraclint; please report it with the oraclint version (do not include secrets)."
+              },
+              "help": {
+                "text": "This is a bug in oraclint; please report it with the oraclint version (do not include secrets).",
+                "markdown": "# Rule failed\n\nThis is a bug in oraclint; please report it with the oraclint version (do not include secrets)."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security"
+                ]
+              }
+            },
+            {
               "id": "NS-AUD-001",
               "name": "AuditLogsForwardedOverPlaintext",
               "shortDescription": {
@@ -1022,7 +1046,7 @@
       "results": [
         {
           "ruleId": "NS-KS-001",
-          "ruleIndex": 19,
+          "ruleIndex": 20,
           "level": "error",
           "message": {
             "text": "InsecureFastScrypt = true makes every keystore use weak scrypt parameters"
@@ -1044,7 +1068,7 @@
         },
         {
           "ruleId": "NS-RPC-001",
-          "ruleIndex": 23,
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "EVM chain \"1\" node \"a\": WSURL uses unencrypted ws:// to rpc.example.com"
@@ -1066,7 +1090,7 @@
         },
         {
           "ruleId": "NS-DB-002",
-          "ruleIndex": 4,
+          "ruleIndex": 5,
           "level": "error",
           "message": {
             "text": "Database.URL connects to db.example.com with sslmode=disable"
@@ -1109,7 +1133,7 @@
         },
         {
           "ruleId": "NS-WEB-001",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "warning",
           "message": {
             "text": "HTTPS disabled"
@@ -1137,7 +1161,7 @@
         },
         {
           "ruleId": "NS-LOG-001",
-          "ruleIndex": 21,
+          "ruleIndex": 22,
           "level": "note",
           "message": {
             "text": "debug logs"
