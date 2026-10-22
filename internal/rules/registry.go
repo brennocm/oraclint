@@ -12,6 +12,7 @@ import (
 // one-line change in review.
 func All() []Rule {
 	all := []Rule{
+		dbTLSDisabled{},
 		insecureFlags{},
 		ksFastScrypt{},
 		rpcPlaintext{},

@@ -1,0 +1,3 @@
+[Database]
+URL = 'postgresql://chainlink:example-password-123@db.example.com:5432/chainlink?sslmode=verify-full'
+BackupURL = 'postgresql://chainlink:example-password-123@replica.example.com:5432/chainlink?sslmode=allow'
