@@ -193,10 +193,12 @@ func (ix *tomlIndexer) expression(e *unstable.Node) {
 	switch e.Kind {
 	case unstable.Table:
 		parts, loc := ix.key(e.Key())
+		ix.recordParents(parts, loc)
 		ix.current = ix.resolve(parts)
 		ix.record(ix.current, loc)
 	case unstable.ArrayTable:
 		parts, loc := ix.key(e.Key())
+		ix.recordParents(parts, loc)
 		base := joinPath(ix.resolve(parts[:len(parts)-1]), parts[len(parts)-1])
 		n := ix.arrayLen[base]
 		ix.arrayLen[base] = n + 1
@@ -277,6 +279,15 @@ func (ix *tomlIndexer) resolve(parts []string) string {
 		}
 	}
 	return path
+}
+
+// recordParents records the implicit tables created by a header: for
+// [Mercury.Credentials.main], "Mercury" and "Mercury.Credentials" are defined
+// at that header unless they appeared earlier.
+func (ix *tomlIndexer) recordParents(parts []string, loc Location) {
+	for i := 1; i < len(parts); i++ {
+		ix.record(ix.resolve(parts[:i]), loc)
+	}
 }
 
 // record keeps the first location seen for a path: the place where the key
