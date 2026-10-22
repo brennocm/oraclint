@@ -72,11 +72,21 @@ func Text(s string) string {
 	s = urlInText.ReplaceAllStringFunc(s, URL)
 	return assignment.ReplaceAllStringFunc(s, func(m string) string {
 		parts := assignment.FindStringSubmatch(m)
-		if parts[3] == Mask {
-			return m
+		if parts[3] == Mask || isKeyword(parts[3]) {
+			return m // already masked, or a boolean such as AllowSimplePasswords = true
 		}
 		return parts[1] + parts[2] + Mask
 	})
+}
+
+// isKeyword reports whether s is a boolean or null keyword. Such values are
+// never secrets, and masking them would only make messages unreadable.
+func isKeyword(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "true", "false", "yes", "no", "on", "off", "null", "none":
+		return true
+	}
+	return false
 }
 
 // sensitiveParams are query parameter names whose values are masked.

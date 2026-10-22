@@ -34,6 +34,8 @@ func TestText(t *testing.T) {
 		{"password=hunter2 and api_key: abc", "password=**** and api_key: ****"},
 		{"KeystorePassword = topsecret", "KeystorePassword = ****"},
 		{"already password=****", "already password=****"},
+		{"AllowSimplePasswords = true disables", "AllowSimplePasswords = true disables"},
+		{"CL_DATABASE_ALLOW_SIMPLE_PASSWORDS=TRUE", "CL_DATABASE_ALLOW_SIMPLE_PASSWORDS=TRUE"},
 		{"nothing to see at line 12", "nothing to see at line 12"},
 	}
 	for _, tc := range tests {

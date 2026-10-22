@@ -115,8 +115,7 @@ func walkYAML(r *Redactor, n *yaml.Node, key string, depth int) {
 // otherwise mask ordinary words in messages. Numbers are registered: numeric
 // passwords and PINs exist.
 func addValue(r *Redactor, s string) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "", "true", "false", "yes", "no", "on", "off", "null", "none":
+	if isKeyword(s) {
 		return
 	}
 	r.Add(s)
