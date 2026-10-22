@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/brennocm/oraclint/internal/redact"
 	"github.com/brennocm/oraclint/internal/rules"
 )
 
@@ -65,7 +66,9 @@ func writeText(w io.Writer, rep Report, opts Options) error {
 				tw.printf("\n")
 			}
 			currentFile = f.Location.File
-			tw.printf("%s\n", tw.paint(ansiBold, currentFile))
+			// File names come from the scanned tree and may contain
+			// escape sequences; messages are already sanitized by the engine.
+			tw.printf("%s\n", tw.paint(ansiBold, redact.Printable(currentFile)))
 		}
 		pos := "-"
 		if f.Location.Line > 0 {

@@ -71,7 +71,8 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 	findings = suppress.Apply(findings, targets, opts.Suppressions, func(id string) bool { return known[id] })
 
 	// Safety net: whatever a rule wrote, mask every known secret and
-	// secret-looking pattern before the finding leaves the engine.
+	// secret-looking pattern before the finding leaves the engine, and
+	// neutralize control characters copied from scanned files.
 	var redactor redact.Redactor
 	for _, t := range targets {
 		redact.Collect(&redactor, t)
@@ -80,10 +81,10 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 	kept := findings[:0]
 	for _, f := range findings {
 		if f.Severity >= opts.MinSeverity {
-			f.Message = redactor.Apply(f.Message)
+			f.Message = redact.Printable(redactor.Apply(f.Message))
 			if f.Suppression != nil {
 				s := *f.Suppression // copy: never mutate shared state
-				s.Reason = redactor.Apply(s.Reason)
+				s.Reason = redact.Printable(redactor.Apply(s.Reason))
 				f.Suppression = &s
 			}
 			kept = append(kept, f)
