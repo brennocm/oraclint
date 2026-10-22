@@ -29,6 +29,7 @@ type scanFlags struct {
 	experimental bool
 	noColor      bool
 	configFile   string
+	ignoreSup    bool
 	quiet        bool
 	verbose      bool
 
@@ -65,6 +66,7 @@ func newScanCommand(info BuildInfo) *cobra.Command {
 	fl.BoolVar(&f.experimental, "experimental", false, "also run experimental rules")
 	fl.BoolVar(&f.noColor, "no-color", false, "disable colored output (also honored: NO_COLOR)")
 	fl.StringVar(&f.configFile, "config-file", "", "oraclint configuration file (default: ./"+suppress.DefaultConfigFile+" if present)")
+	fl.BoolVar(&f.ignoreSup, "ignore-suppressions", false, "ignore the oraclint config file and inline oraclint:ignore directives (audit mode for untrusted content)")
 	fl.BoolVarP(&f.quiet, "quiet", "q", false, "print findings only, no summary or warnings")
 	fl.BoolVarP(&f.verbose, "verbose", "v", false, "log debug information to stderr")
 	fl.StringArrayVar(&f.config, "config", nil, "node config file; repeat to merge several in order, like the node")
@@ -111,7 +113,10 @@ func runScan(cmd *cobra.Command, info BuildInfo, f scanFlags, paths []string) er
 	if err != nil {
 		cwd = ""
 	}
-	rep := report.Report{ToolVersion: info.Version, Rules: ran, Findings: findings, FilesScanned: files, BaseDir: cwd}
+	rep := report.Report{
+		ToolVersion: info.Version, Rules: ran, Findings: findings, FilesScanned: files, BaseDir: cwd,
+		Disabled: disabledRules(opts.Suppressions),
+	}
 	if err := writeReport(cmd, f, rep); err != nil {
 		return err
 	}
@@ -142,9 +147,11 @@ func engineOptions(f scanFlags) (engine.Options, rules.Severity, error) {
 	}
 
 	known := func(id string) bool { _, ok := rules.ByID(id); return ok }
-	cfg, err := loadConfigFile(f.configFile, known)
-	if err != nil {
-		return opts, 0, err
+	var cfg *suppress.Config
+	if !f.ignoreSup {
+		if cfg, err = loadConfigFile(f.configFile, known); err != nil {
+			return opts, 0, err
+		}
 	}
 
 	opts = engine.Options{
@@ -153,6 +160,8 @@ func engineOptions(f scanFlags) (engine.Options, rules.Severity, error) {
 		Enable:       map[string]bool{},
 		Disable:      cfg.DisabledRules(),
 		Suppressions: cfg,
+
+		IgnoreSuppressions: f.ignoreSup,
 	}
 	for _, flag := range []struct {
 		name string
@@ -168,6 +177,18 @@ func engineOptions(f scanFlags) (engine.Options, rules.Severity, error) {
 		}
 	}
 	return opts, failOn, nil
+}
+
+// disabledRules lists the rules a config file turns off, for the report.
+func disabledRules(cfg *suppress.Config) []report.DisabledRule {
+	if cfg == nil {
+		return nil
+	}
+	out := make([]report.DisabledRule, 0, len(cfg.Disable))
+	for _, d := range cfg.Disable {
+		out = append(out, report.DisabledRule{ID: d.Rule, Reason: d.Reason, Source: cfg.File})
+	}
+	return out
 }
 
 // loadConfigFile reads --config-file, or ./.oraclint.yaml when it exists.

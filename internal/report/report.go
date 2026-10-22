@@ -34,6 +34,16 @@ type Report struct {
 	// BaseDir makes absolute file paths relative in SARIF output. Empty
 	// means paths are used as they are.
 	BaseDir string
+	// Disabled lists rules turned off by the oraclint config file, so a
+	// config that silences rules is always visible in the output.
+	Disabled []DisabledRule
+}
+
+// DisabledRule is a rule switched off by configuration, with the reason.
+type DisabledRule struct {
+	ID     string `json:"rule_id"`
+	Reason string `json:"reason"`
+	Source string `json:"source"`
 }
 
 // Options tune the text reporter.
