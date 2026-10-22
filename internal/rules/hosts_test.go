@@ -34,3 +34,20 @@ func TestHosts(t *testing.T) {
 		}
 	}
 }
+
+func TestEndpointHost(t *testing.T) {
+	tests := map[string]string{
+		"otel.example.com:4317":         "otel.example.com",
+		"https://otel.example.com:4317": "otel.example.com",
+		"[::1]:4317":                    "::1",
+		"collector":                     "collector",
+		"collector/v1/traces":           "collector",
+		"http://":                       "",
+		"":                              "",
+	}
+	for in, want := range tests {
+		if got := endpointHost(in); got != want {
+			t.Errorf("endpointHost(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -1,0 +1,5 @@
+[Tracing]
+Enabled = true
+Mode = 'tls'
+CollectorTarget = 'otel.example.com:4317'
+TLSCertPath = '/certs/otel.pem'

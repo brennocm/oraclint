@@ -1,0 +1,5 @@
+[Tracing]
+Enabled = true
+Mode = 'unencrypted'
+CollectorTarget = 'otel.example.com:4317'
+NodeID = 'node-1'
