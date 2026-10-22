@@ -17,5 +17,6 @@ func TestK8sUIExposed(t *testing.T) {
 		{"named targetPort", svc("LoadBalancer", "  - port: 443\n    targetPort: http\n"), nil},
 		{"cluster ip", svc("ClusterIP", "  - port: 6688\n"), nil},
 		{"other port", svc("LoadBalancer", "  - port: 30303\n"), nil},
+		{"inside a List", k8s("apiVersion: v1\nkind: List\nitems:\n- apiVersion: v1\n  kind: Service\n  metadata: {name: s}\n  spec:\n    type: NodePort\n    ports: [{port: 6688}]\n"), []int{9}},
 	})
 }
