@@ -57,10 +57,11 @@ signatures, SBOMs and build provenance (see [Verifying a release](#verifying-a-r
 go install github.com/brennocm/oraclint/cmd/oraclint@latest
 ```
 
-**Docker:**
+**Docker** (the image runs as a non-root user; `--user` lets it read files
+that are only readable by you, such as a `0600` secrets file):
 
 ```sh
-docker run --rm -v "$PWD:/src" -w /src ghcr.io/brennocm/oraclint:latest scan .
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src:ro" -w /src ghcr.io/brennocm/oraclint:latest scan .
 ```
 
 ## Quick start
