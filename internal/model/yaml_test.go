@@ -2,6 +2,8 @@ package model
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -133,4 +135,85 @@ func FuzzParseYAML(f *testing.F) {
 			}
 		}
 	})
+}
+
+func TestYAMLMergeKeys(t *testing.T) {
+	src := `x-base: &base
+  privileged: true
+  user: root
+x-more: &more
+  pid: host
+  user: nobody
+svc:
+  <<: [*base, *more]
+  user: "14933"
+  image: a:1
+env:
+  <<: *base
+  extra: 1
+`
+	docs, err := ParseYAML("c.yml", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := MapValue(docs[0], "svc")
+	tests := []struct{ key, want string }{
+		{"privileged", "true"}, // from the first merge source
+		{"pid", "host"},        // from the second
+		{"user", "14933"},      // explicit key wins over merged ones
+		{"image", "a:1"},
+	}
+	for _, tc := range tests {
+		k, v := MapGet(svc, tc.key)
+		if got, _ := ScalarString(v); got != tc.want || k == nil {
+			t.Errorf("MapGet(%q) = %q, want %q", tc.key, got, tc.want)
+		}
+	}
+	keys, _ := MapPairs(MapValue(docs[0], "env"))
+	var names []string
+	for _, k := range keys {
+		names = append(names, k.Value)
+	}
+	if strings.Join(names, ",") != "extra,privileged,user" {
+		t.Errorf("MapPairs with merge = %v", names)
+	}
+}
+
+func TestYAMLMergeCycleIsBounded(t *testing.T) {
+	// yaml.v3 refuses an anchor that contains itself; a long chain of merges
+	// is still bounded by maxMergeDepth.
+	var b strings.Builder
+	b.WriteString("a0: &a0 {k: v}\n")
+	for i := 1; i <= 30; i++ {
+		fmt.Fprintf(&b, "a%d: &a%d {<<: *a%d}\n", i, i, i-1)
+	}
+	docs, err := ParseYAML("c.yml", []byte(b.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := MapValue(MapValue(docs[0], "a30"), "k"); v != nil {
+		t.Error("lookups deeper than maxMergeDepth must stop")
+	}
+	if v := MapValue(MapValue(docs[0], "a5"), "k"); v == nil {
+		t.Error("shallow merge chains must resolve")
+	}
+}
+
+func TestDuplicateKeys(t *testing.T) {
+	src := "a: 1\nb:\n  c: 1\n  c: 2\na: 3\nx: &x {k: 1}\ny: *x\nz:\n  <<: *x\n  <<: *x\n"
+	docs, err := ParseYAML("d.yml", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dups := DuplicateKeys("d.yml", docs)
+	if len(dups) != 2 || dups[0].Loc.Line != 4 || dups[1].Loc.Line != 5 {
+		t.Fatalf("duplicates = %+v", dups)
+	}
+	if !strings.Contains(dups[1].Msg, `duplicate key "a" (first defined at line 1)`) {
+		t.Errorf("message = %q", dups[1].Msg)
+	}
+	// Last value wins for lookups, matching lenient parsers.
+	if v, _ := ScalarString(MapValue(docs[0], "a")); v != "3" {
+		t.Errorf("MapGet on duplicate = %q, want last value", v)
+	}
 }
