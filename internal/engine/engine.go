@@ -11,11 +11,6 @@ import (
 	"github.com/brennocm/oraclint/internal/rules"
 )
 
-// ParseErrorRuleID is the pseudo rule ID used for files that could not be
-// scanned. It is reported like a finding so a broken file never passes CI
-// silently.
-const ParseErrorRuleID = "parse-error"
-
 // Options select which rules run and which findings are kept.
 type Options struct {
 	MinSeverity  rules.Severity
@@ -46,12 +41,12 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 	var findings []rules.Finding
 	for _, p := range problems {
 		findings = append(findings, rules.Finding{
-			RuleID:      ParseErrorRuleID,
-			Severity:    rules.SeverityHigh,
-			Title:       "File could not be scanned",
+			RuleID:      rules.ParseError.ID,
+			Severity:    rules.ParseError.Severity,
+			Title:       rules.ParseError.Title,
 			Message:     p.Msg,
 			Location:    p.Loc,
-			Remediation: "Fix the file so it parses, or exclude it from the scan.",
+			Remediation: rules.ParseError.Remediation,
 		})
 	}
 

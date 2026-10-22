@@ -102,6 +102,17 @@ type Rule interface {
 	Check(t *model.Target) []Finding
 }
 
+// ParseError describes the pseudo rule used for files that could not be
+// scanned. It is reported like a finding so a broken file never passes CI
+// silently, and it has a SARIF rule entry like any other rule.
+var ParseError = Metadata{
+	ID:          "parse-error",
+	Title:       "File could not be scanned",
+	Severity:    SeverityHigh,
+	Status:      Stable,
+	Remediation: "Fix the file so it parses, or exclude it from the scan.",
+}
+
 // newFinding fills the rule-level fields of a Finding from its metadata.
 func newFinding(m Metadata, loc model.Location, format string, args ...any) Finding {
 	return Finding{
