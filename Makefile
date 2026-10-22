@@ -8,7 +8,11 @@ DATE     ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS  := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 FUZZTIME ?= 30s
 
-.PHONY: all build test test-race cover lint vuln fuzz golden-update demo clean
+.PHONY: all build test test-race cover cover-check lint vuln fuzz golden-update demo clean
+
+# Packages that must keep at least COVER_MIN% statement coverage.
+CORE_PKGS := engine loader model redact report rules suppress
+COVER_MIN := 80
 
 all: lint test build
 
@@ -24,6 +28,14 @@ test-race:
 cover:
 	go test -coverprofile=coverage.out -covermode=atomic ./...
 	go tool cover -func=coverage.out | tail -n 1
+
+# Fails if any core package drops below COVER_MIN% coverage.
+cover-check:
+	@for p in $(CORE_PKGS); do \
+		pct=$$(go test -cover ./internal/$$p/ | sed -n 's/.*coverage: \([0-9.]*\)%.*/\1/p'); \
+		echo "internal/$$p: $$pct%"; \
+		awk -v p="$$pct" -v m=$(COVER_MIN) 'BEGIN { exit !(p >= m) }' || { echo "coverage below $(COVER_MIN)%"; exit 1; }; \
+	done
 
 lint:
 	golangci-lint run ./...
