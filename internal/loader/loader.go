@@ -156,7 +156,9 @@ func (l *loader) loadPath(path string) error {
 			return fmt.Errorf("cannot scan %s: not a regular file", path)
 		}
 		if l.markSeen(path) {
-			l.loadFile(openPath(path), displayPath(path), classifyByName(filepath.Base(path)))
+			c := classifyByName(filepath.Base(path))
+			c.strong, c.explicit = true, true
+			l.loadFile(openPath(path), displayPath(path), c)
 		}
 		return nil
 	}
@@ -230,7 +232,7 @@ func openPath(path string) opener {
 // usually not node files at all (for example Helm templates).
 func (l *loader) loadFile(open opener, display string, c class) {
 	if c.format == formatNone {
-		l.opts.Logger.Debug("skipping file of unknown type", "path", display)
+		l.notRecognized(display, c)
 		return
 	}
 	data, mode, ok := l.read(open, display, c.strong)
@@ -253,7 +255,7 @@ func (l *loader) loadFile(open opener, display string, c class) {
 			t.Kind = classifyTOML(path.Base(display), root)
 		}
 		if t.Kind == 0 {
-			l.opts.Logger.Debug("skipping TOML file that is not a node config", "path", display)
+			l.notRecognized(display, c)
 			return
 		}
 		t.TOML = &model.TOMLDoc{Kind: t.Kind, Root: root}
@@ -275,7 +277,7 @@ func (l *loader) loadFile(open opener, display string, c class) {
 			t.Kind = model.KindK8s
 		}
 		if t.Kind == 0 {
-			l.opts.Logger.Debug("skipping YAML file that is not a Kubernetes manifest", "path", display)
+			l.notRecognized(display, c)
 			return
 		}
 		t.YAML = docs
@@ -328,6 +330,20 @@ func (l *loader) read(open opener, display string, report bool) ([]byte, fs.File
 		return nil, 0, false
 	}
 	return data, mode, true
+}
+
+// notRecognized handles a file that turned out not to be a node file. Files
+// found while walking are skipped quietly; a file the user named explicitly
+// is reported, because skipping it would look like a clean result.
+func (l *loader) notRecognized(display string, c class) {
+	if !c.explicit {
+		l.opts.Logger.Debug("skipping file that is not a node file", "path", display)
+		return
+	}
+	l.res.Problems = append(l.res.Problems, &model.ParseError{
+		Loc: model.Location{File: display},
+		Msg: "not recognized as a node config, secrets, compose, Kubernetes or dotenv file; pass it with --config, --secrets, --compose, --k8s or --env",
+	})
 }
 
 func (l *loader) parseFailed(err error, display string, report bool) {

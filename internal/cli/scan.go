@@ -105,10 +105,17 @@ func runScan(cmd *cobra.Command, info BuildInfo, f scanFlags, paths []string) er
 	for _, r := range engine.Select(all, opts) {
 		ran = append(ran, r.Metadata())
 	}
-	files := 0
+	// Count every file looked at, including those that could not be scanned.
+	seenFiles := map[string]bool{}
 	for _, t := range res.Targets {
-		files += len(t.Files)
+		for _, file := range t.Files {
+			seenFiles[file] = true
+		}
 	}
+	for _, p := range res.Problems {
+		seenFiles[p.Loc.File] = true
+	}
+	files := len(seenFiles)
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = ""
@@ -213,14 +220,33 @@ func writeReport(cmd *cobra.Command, f scanFlags, rep report.Report) error {
 		return err
 	}
 	if f.output != "" {
-		// 0600: a findings report maps the weak spots of the deployment.
-		if err := os.WriteFile(f.output, buf.Bytes(), 0o600); err != nil {
-			return fmt.Errorf("writing report: %w", err)
-		}
-		return nil
+		return writeFile(f.output, buf.Bytes())
 	}
 	_, err := out.Write(buf.Bytes())
 	return err
+}
+
+// writeFile writes the report file. It refuses to write through a symlink:
+// when scanning a checked-out pull request, the default output name could be
+// committed as a link pointing at another file, which would be overwritten.
+// New files are created with mode 0600, since a report maps the weak spots of
+// a deployment.
+func writeFile(path string, data []byte) error {
+	if info, err := os.Lstat(path); err == nil && info.Mode()&fs.ModeSymlink != 0 {
+		return fmt.Errorf("refusing to write report to %s: it is a symbolic link", path)
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) //nolint:gosec // the user chooses the output path
+	if err != nil {
+		return fmt.Errorf("writing report: %w", err)
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close() //nolint:errcheck,gosec // the write error is the one worth reporting
+		return fmt.Errorf("writing report: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("writing report: %w", err)
+	}
+	return nil
 }
 
 func isFormat(s string) bool {
