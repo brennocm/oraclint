@@ -77,13 +77,16 @@ func walkTOML(v *model.Value, path string, visit func(path, s string)) {
 // maxYAMLDepth bounds recursion on hostile, deeply nested YAML.
 const maxYAMLDepth = 100
 
+// walkYAML visits every node once, in document order. It deliberately does
+// not follow alias nodes: the aliased content was already visited where the
+// anchor is defined, and following aliases turns a few lines of nested
+// references ("billion laughs") into an exponential walk.
 func walkYAML(r *Redactor, n *yaml.Node, key string, depth int) {
-	if n == nil || depth > maxYAMLDepth {
+	if n == nil || depth > maxYAMLDepth || n.Kind == yaml.AliasNode {
 		return
 	}
 	switch n.Kind {
 	case yaml.MappingNode:
-		keys, values := model.MapPairs(n)
 		// Kubernetes env entries are {name: X, value: Y}: the sensitive name
 		// is a sibling of the value.
 		if name, ok := model.ScalarString(model.MapValue(n, "name")); ok && sensitiveName.MatchString(name) {
@@ -91,11 +94,11 @@ func walkYAML(r *Redactor, n *yaml.Node, key string, depth int) {
 				addValue(r, v)
 			}
 		}
-		for i := range keys {
-			walkYAML(r, values[i], keys[i].Value, depth+1)
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			walkYAML(r, n.Content[i+1], n.Content[i].Value, depth+1)
 		}
 	case yaml.SequenceNode:
-		for _, item := range model.SeqItems(n) {
+		for _, item := range n.Content {
 			walkYAML(r, item, key, depth+1)
 		}
 	case yaml.ScalarNode:
