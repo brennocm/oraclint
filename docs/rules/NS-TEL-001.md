@@ -11,7 +11,10 @@ Fires when:
 - `Telemetry.Enabled = true` and `Telemetry.InsecureConnection = true` (default
   `false`) with a non-internal `Telemetry.Endpoint`; or
 - `Telemetry.ChipIngressInsecureConnection = true` (default `false`) with a
-  non-internal `Telemetry.ChipIngressEndpoint`.
+  non-internal `Telemetry.ChipIngressEndpoint`. This applies even when
+  `Telemetry.Enabled` is false: the node's durable emitter
+  (`DurableEmitterEnabled`, default `true`) sends CHIP ingress events on its
+  own (`core/services/chainlink/application.go`, v2.69.0).
 
 ## Why it matters
 

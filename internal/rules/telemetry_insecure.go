@@ -33,6 +33,10 @@ func (r telemetryInsecure) Check(t *model.Target) []Finding {
 		}
 	}
 
+	// CHIP ingress does not depend on Telemetry.Enabled: the durable emitter
+	// (DurableEmitterEnabled, default true) sends to ChipIngressEndpoint with
+	// ChipIngressInsecureConnection on its own (core/services/chainlink/
+	// application.go, v2.69.0).
 	chip := doc.Get("Telemetry.ChipIngressInsecureConnection")
 	chipEndpoint, _ := doc.Get("Telemetry.ChipIngressEndpoint").String()
 	if host := endpointHost(chipEndpoint); chip.IsTrue() && chipEndpoint != "" && !isInternalHost(host) {
