@@ -26,15 +26,23 @@ type jsonSummary struct {
 	FilesScanned int    `json:"files_scanned"`
 	Total        int    `json:"total"`
 	BySeverity   Counts `json:"by_severity"`
+	Suppressed   int    `json:"suppressed"`
 }
 
 type jsonFinding struct {
-	RuleID      string       `json:"rule_id"`
-	Severity    string       `json:"severity"`
-	Title       string       `json:"title"`
-	Message     string       `json:"message"`
-	Location    jsonLocation `json:"location"`
-	Remediation string       `json:"remediation"`
+	RuleID      string           `json:"rule_id"`
+	Severity    string           `json:"severity"`
+	Title       string           `json:"title"`
+	Message     string           `json:"message"`
+	Location    jsonLocation     `json:"location"`
+	Remediation string           `json:"remediation"`
+	Suppression *jsonSuppression `json:"suppression,omitempty"`
+}
+
+type jsonSuppression struct {
+	Kind   string       `json:"kind"`
+	Reason string       `json:"reason"`
+	Source jsonLocation `json:"source"`
 }
 
 type jsonLocation struct {
@@ -50,9 +58,25 @@ func writeJSON(w io.Writer, rep Report) error {
 		Findings:      make([]jsonFinding, 0, len(rep.Findings)), // [] rather than null when empty
 	}
 	counts := countBySeverity(rep.Findings)
-	out.Summary = jsonSummary{FilesScanned: rep.FilesScanned, Total: counts.Total(), BySeverity: counts}
+	out.Summary = jsonSummary{
+		FilesScanned: rep.FilesScanned,
+		Total:        counts.Total(),
+		BySeverity:   counts,
+		Suppressed:   countSuppressed(rep.Findings),
+	}
 
 	for _, f := range rep.Findings {
+		var sup *jsonSuppression
+		if f.Suppression != nil {
+			sup = &jsonSuppression{
+				Kind:   f.Suppression.Kind,
+				Reason: f.Suppression.Reason,
+				Source: jsonLocation{
+					File: relativePath(rep.BaseDir, f.Suppression.Source.File),
+					Line: f.Suppression.Source.Line, Column: f.Suppression.Source.Column,
+				},
+			}
+		}
 		out.Findings = append(out.Findings, jsonFinding{
 			RuleID:   f.RuleID,
 			Severity: f.Severity.String(),
@@ -64,6 +88,7 @@ func writeJSON(w io.Writer, rep Report) error {
 				Column: f.Location.Column,
 			},
 			Remediation: f.Remediation,
+			Suppression: sup,
 		})
 	}
 

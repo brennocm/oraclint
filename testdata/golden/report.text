@@ -12,4 +12,4 @@ ops/docker-compose.yml
   -       HIGH     parse-error  invalid YAML
           fix: Fix parse-error.
 
-4 findings in 3 files: 0 critical, 4 high, 0 medium, 0 low, 0 info
+4 findings in 3 files: 0 critical, 4 high, 0 medium, 0 low, 0 info (2 suppressed)

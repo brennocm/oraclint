@@ -46,8 +46,17 @@ func sampleReport() Report {
 			finding("NS-RPC-001", rules.SeverityHigh, "node/config.toml", 12, 1, `EVM chain "1" node "a": WSURL uses unencrypted ws:// to rpc.example.com`),
 			finding("NS-DB-002", rules.SeverityHigh, "node/secrets.toml", 2, 1, "Database.URL connects to db.example.com with sslmode=disable"),
 			finding("parse-error", rules.SeverityHigh, "ops/docker-compose.yml", 0, 0, "invalid YAML"),
+			suppressed(finding("NS-WEB-001", rules.SeverityMedium, "node/config.toml", 20, 1, "HTTPS disabled"),
+				rules.SuppressionInline, "TLS terminated at the load balancer", model.Location{File: "node/config.toml", Line: 19, Column: 1}),
+			suppressed(finding("NS-LOG-001", rules.SeverityLow, "node/config.toml", 25, 1, "debug logs"),
+				rules.SuppressionConfig, "staging node", model.Location{File: ".oraclint.yaml"}),
 		},
 	}
+}
+
+func suppressed(f rules.Finding, kind, reason string, src model.Location) rules.Finding {
+	f.Suppression = &rules.Suppression{Kind: kind, Reason: reason, Source: src}
+	return f
 }
 
 func TestGolden(t *testing.T) {
@@ -88,6 +97,26 @@ func TestEmptyReport(t *testing.T) {
 	}
 	if !strings.Contains(js.String(), `"findings": []`) {
 		t.Errorf("empty findings must be [] not null: %s", js.String())
+	}
+}
+
+func TestTextQuietAndSuppressed(t *testing.T) {
+	var buf bytes.Buffer
+	if err := Write(&buf, FormatText, sampleReport(), Options{Quiet: true}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "findings in") || strings.Contains(out, "NS-LOG-001") {
+		t.Errorf("quiet output must have no summary and no suppressed findings:\n%s", out)
+	}
+	buf.Reset()
+	rep := sampleReport()
+	rep.Findings = rep.Findings[4:] // only the suppressed ones
+	if err := Write(&buf, FormatText, rep, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "No issues found in 3 files (2 suppressed).") {
+		t.Errorf("summary = %q", buf.String())
 	}
 }
 
@@ -158,8 +187,17 @@ func TestSARIFContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := log.Runs[0]
-	if len(run.Tool.Driver.Rules) != len(rules.All())+1 {
-		t.Errorf("driver rules = %d, want every rule plus parse-error", len(run.Tool.Driver.Rules))
+	if len(run.Tool.Driver.Rules) != len(rules.All())+2 {
+		t.Errorf("driver rules = %d, want every rule plus the two pseudo rules", len(run.Tool.Driver.Rules))
+	}
+	var sup int
+	for _, res := range run.Results {
+		if len(res.Suppressions) == 1 {
+			sup++
+		}
+	}
+	if sup != 2 {
+		t.Errorf("suppressed results = %d, want 2", sup)
 	}
 	for _, res := range run.Results {
 		r := run.Tool.Driver.Rules[res.RuleIndex]

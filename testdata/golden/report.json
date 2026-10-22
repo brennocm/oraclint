@@ -14,7 +14,8 @@
       "medium": 0,
       "low": 0,
       "info": 0
-    }
+    },
+    "suppressed": 2
   },
   "findings": [
     {
@@ -62,6 +63,46 @@
         "file": "ops/docker-compose.yml"
       },
       "remediation": "Fix parse-error."
+    },
+    {
+      "rule_id": "NS-WEB-001",
+      "severity": "medium",
+      "title": "Title of NS-WEB-001",
+      "message": "HTTPS disabled",
+      "location": {
+        "file": "node/config.toml",
+        "line": 20,
+        "column": 1
+      },
+      "remediation": "Fix NS-WEB-001.",
+      "suppression": {
+        "kind": "inline",
+        "reason": "TLS terminated at the load balancer",
+        "source": {
+          "file": "node/config.toml",
+          "line": 19,
+          "column": 1
+        }
+      }
+    },
+    {
+      "rule_id": "NS-LOG-001",
+      "severity": "low",
+      "title": "Title of NS-LOG-001",
+      "message": "debug logs",
+      "location": {
+        "file": "node/config.toml",
+        "line": 25,
+        "column": 1
+      },
+      "remediation": "Fix NS-LOG-001.",
+      "suppression": {
+        "kind": "config",
+        "reason": "staging node",
+        "source": {
+          "file": ".oraclint.yaml"
+        }
+      }
     }
   ]
 }
