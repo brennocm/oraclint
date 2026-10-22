@@ -21,12 +21,12 @@ flowchart LR
 |---|---|
 | `cmd/oraclint` | `main` only: build metadata and `cli.Execute`. Also hosts the testscript end-to-end tests. |
 | `internal/cli` | cobra commands (`scan`, `rules list`, `rules explain`, `version`), flag validation, exit codes, color detection. |
-| `internal/loader` | Finds files (walk through `os.Root`), classifies them by name and content, enforces the size limit, parses them into `model.Target`s, collects `oraclint:ignore` directives. Problems become `ParseError`s instead of aborting the scan. |
-| `internal/model` | Position-aware document model. `Value` (TOML tree with a `Location` per key), `Field` (effective value: explicit or node default), `defaults.go` (every default rules rely on, with sources), `Merge` (node override semantics), YAML helpers that follow aliases at most once, dotenv parser, directive parser. |
+| `internal/loader` | Finds files (walk through `os.Root`, honoring `--exclude`/config excludes), classifies them by name and content, enforces the size limit, parses them into `model.Target`s, collects `oraclint:ignore` directives, reports duplicate YAML keys. Problems become `ParseError`s instead of aborting the scan; explicitly named files that cannot be used are reported. |
+| `internal/model` | Position-aware document model. `Value` (TOML tree with a `Location` per key), `Field` (effective value: explicit or node default), `defaults.go` (every default rules rely on, with sources), `Merge` (node override semantics), YAML helpers that follow aliases at most once and resolve merge keys (`<<: *anchor`), duplicate-key detection, dotenv parser, directive parser, `MatchPath` for path patterns. |
 | `internal/rules` | The `Rule` interface, `Severity`/`Status`, the explicit registry and one file per rule. Rules are pure functions of a `Target`. Shared helpers: host classification, compose services and ports, Kubernetes pod specs, environment variables, image references. |
-| `internal/engine` | Selects rules (stable / experimental / enable / disable), runs them on the targets they apply to, turns loader problems into `parse-error` findings, applies suppressions, redacts messages, filters by severity and sorts deterministically. |
-| `internal/suppress` | Parses and validates `.oraclint.yaml`; applies config and inline suppressions; reports invalid directives. |
-| `internal/redact` | Collects known secrets from targets and masks them plus secret-looking patterns in any text. |
+| `internal/engine` | Selects rules (stable / experimental / enable / disable), runs them on the targets they apply to (a panic in a rule becomes an `internal-error` finding), turns loader problems into `parse-error` findings, applies suppressions, redacts and sanitizes messages, filters by severity and sorts deterministically. |
+| `internal/suppress` | Parses and validates `.oraclint.yaml` (`disable`, `ignore`, `exclude`); applies config and inline suppressions; reports invalid directives. |
+| `internal/redact` | Collects known secrets from targets and masks them plus secret-looking patterns in any text; `Printable` escapes control characters, invalid UTF-8 and bidi overrides copied from scanned files. |
 | `internal/report` | Text, JSON (versioned schema) and SARIF 2.1.0 writers. |
 | `docs` | Embeds `docs/rules/*.md` into the binary for `rules explain` and SARIF help. |
 
@@ -46,7 +46,8 @@ flowchart LR
    returns the node default and the nearest location when a key is absent.
 5. `suppress.Apply` marks suppressed findings and reports invalid directives.
 6. `redact.Collect` registers every secret found in the targets; each message
-   and suppression reason passes through `Redactor.Apply`.
+   and suppression reason passes through `Redactor.Apply` and
+   `redact.Printable`.
 7. Findings are filtered by `--min-severity` and sorted by file, line, column,
    rule ID and message.
 8. `report.Write` renders the chosen format into memory, which is then written
