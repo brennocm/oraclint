@@ -21,6 +21,13 @@ func TestRPCCredentialInURL(t *testing.T) {
 		{"long segment without digits", cfg(evmNode("https://rpc.example.com/ethereum-mainnet-archive-node")), nil},
 		{"disabled chain still flagged", cfg("[[EVM]]\nChainID = '5'\nEnabled = false\n[[EVM.Nodes]]\nName = 'n'\nWSURL = 'wss://rpc.example.com/ws/0123456789abcdef0123456789abcdef'\n"), []int{6}},
 	})
+	// Several sensitive parameters: always the first one in the URL.
+	for i := 0; i < 20; i++ {
+		f := rpcCredentialInURL{}.Check(configTarget(t, evmNode("https://rpc.example.com/?token=a&apikey=b&key=c")))
+		if !strings.HasSuffix(f[0].Message, "(query parameter token)") {
+			t.Fatalf("message not deterministic: %q", f[0].Message)
+		}
+	}
 	f := rpcCredentialInURL{}.Check(configTarget(t, evmNode("https://mainnet.infura.io/v3/0123456789abcdef0123456789abcdef")))
 	if strings.Contains(f[0].Message, "0123456789abcdef") {
 		t.Errorf("message leaks the key: %q", f[0].Message)

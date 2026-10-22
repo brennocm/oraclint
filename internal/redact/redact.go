@@ -50,8 +50,15 @@ func (r *Redactor) Add(secret string) {
 func (r *Redactor) Apply(s string) string {
 	if !r.sorted {
 		// Longest first, so a secret that contains another one is masked
-		// as a whole.
-		sort.Slice(r.secrets, func(i, j int) bool { return len(r.secrets[i]) > len(r.secrets[j]) })
+		// as a whole; ties broken lexically so the result never depends on
+		// registration order (which can come from map iteration).
+		sort.Slice(r.secrets, func(i, j int) bool {
+			a, b := r.secrets[i], r.secrets[j]
+			if len(a) != len(b) {
+				return len(a) > len(b)
+			}
+			return a < b
+		})
 		r.sorted = true
 	}
 	for _, secret := range r.secrets {
