@@ -24,6 +24,9 @@ inputs:
   experimental:
     description: "Also run experimental rules (true/false)."
     default: "false"
+  ignore-suppressions:
+    description: "Ignore .oraclint.yaml and inline oraclint:ignore directives (true/false). Use \"true\" when scanning untrusted pull requests."
+    default: "false"
 
 runs:
   using: docker
@@ -37,5 +40,6 @@ runs:
     - --fail-on=${{ inputs.fail-on }}
     - --min-severity=${{ inputs.min-severity }}
     - --experimental=${{ inputs.experimental }}
+    - --ignore-suppressions=${{ inputs.ignore-suppressions }}
     - --
     - ${{ inputs.path }}

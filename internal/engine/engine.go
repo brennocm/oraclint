@@ -21,6 +21,9 @@ type Options struct {
 	// Suppressions from .oraclint.yaml; nil when there is no config file.
 	// Inline directives come with the targets.
 	Suppressions *suppress.Config
+	// IgnoreSuppressions disables inline directives too (audit mode, for
+	// scanning content whose suppressions are not trusted).
+	IgnoreSuppressions bool
 }
 
 // Select returns the rules that should run with these options.
@@ -68,7 +71,9 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 	for _, r := range all {
 		known[r.Metadata().ID] = true
 	}
-	findings = suppress.Apply(findings, targets, opts.Suppressions, func(id string) bool { return known[id] })
+	if !opts.IgnoreSuppressions {
+		findings = suppress.Apply(findings, targets, opts.Suppressions, func(id string) bool { return known[id] })
+	}
 
 	// Safety net: whatever a rule wrote, mask every known secret and
 	// secret-looking pattern before the finding leaves the engine, and

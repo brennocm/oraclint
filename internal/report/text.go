@@ -94,6 +94,12 @@ func writeText(w io.Writer, rep Report, opts Options) error {
 }
 
 func writeSummary(tw *textWriter, rep Report) {
+	defer func() {
+		for _, d := range rep.Disabled {
+			tw.printf("%s %s disabled by %s: %s\n", tw.paint(ansiYellow, "!"), d.ID,
+				redact.Printable(d.Source), redact.Printable(d.Reason))
+		}
+	}()
 	c := countBySeverity(rep.Findings)
 	suppressed := ""
 	if n := countSuppressed(rep.Findings); n > 0 {

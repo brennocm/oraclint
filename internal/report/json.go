@@ -27,6 +27,8 @@ type jsonSummary struct {
 	Total        int    `json:"total"`
 	BySeverity   Counts `json:"by_severity"`
 	Suppressed   int    `json:"suppressed"`
+	// DisabledRules is always present ([] when none), see docs/output-json.md.
+	DisabledRules []DisabledRule `json:"disabled_rules"`
 }
 
 type jsonFinding struct {
@@ -59,10 +61,11 @@ func writeJSON(w io.Writer, rep Report) error {
 	}
 	counts := countBySeverity(rep.Findings)
 	out.Summary = jsonSummary{
-		FilesScanned: rep.FilesScanned,
-		Total:        counts.Total(),
-		BySeverity:   counts,
-		Suppressed:   countSuppressed(rep.Findings),
+		FilesScanned:  rep.FilesScanned,
+		Total:         counts.Total(),
+		BySeverity:    counts,
+		Suppressed:    countSuppressed(rep.Findings),
+		DisabledRules: append([]DisabledRule{}, rep.Disabled...),
 	}
 
 	for _, f := range rep.Findings {
