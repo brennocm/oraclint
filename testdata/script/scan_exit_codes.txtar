@@ -1,0 +1,29 @@
+# Exit 0: nothing at or above the default --fail-on (low).
+exitcode 0 oraclint scan clean
+stdout 'No issues found in 1 file.'
+
+# Exit 1: findings at or above --fail-on.
+exitcode 1 oraclint scan vulnerable
+stdout 'NS-KS-001'
+stdout '1 finding in 1 file: 0 critical, 1 high'
+
+# A higher threshold, or none, turns the same findings into exit 0.
+exitcode 0 oraclint scan --fail-on critical vulnerable
+exitcode 0 oraclint scan --fail-on none vulnerable
+
+# Exit 2: usage and runtime errors.
+exitcode 2 oraclint scan --fail-on urgent vulnerable
+stderr 'unknown severity "urgent"'
+exitcode 2 oraclint scan --min-severity nope vulnerable
+exitcode 2 oraclint scan --format xml vulnerable
+stderr 'unknown format "xml"'
+exitcode 2 oraclint scan does-not-exist
+stderr 'cannot scan does-not-exist'
+exitcode 2 oraclint scan --enable NS-NOPE-001 vulnerable
+stderr 'unknown rule "NS-NOPE-001"'
+
+-- clean/config.toml --
+[Log]
+Level = 'info'
+-- vulnerable/config.toml --
+InsecureFastScrypt = true

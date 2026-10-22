@@ -1,0 +1,36 @@
+# JSON output is versioned and lists findings.
+exitcode 1 oraclint scan --format json node
+stdout '"schema_version": "1"'
+stdout '"rule_id": "NS-WEB-003"'
+stdout '"file": "node/config.toml"'
+
+# SARIF goes to a file with --output; stdout stays empty.
+exitcode 1 oraclint scan --format sarif --output out.sarif node
+! stdout .
+exists out.sarif
+grep '"version": "2.1.0"' out.sarif
+grep '"ruleId": "NS-WEB-003"' out.sarif
+grep '"uri": "node/config.toml"' out.sarif
+
+# --min-severity hides findings below the threshold.
+exitcode 1 oraclint scan --min-severity medium node
+stdout NS-WEB-003
+! stdout NS-LOG-001
+exitcode 0 oraclint scan --min-severity high node
+stdout 'No issues found in 1 file.'
+
+# --quiet prints findings without the summary line.
+exitcode 1 oraclint scan --quiet node
+stdout NS-WEB-003
+! stdout 'findings in'
+
+# Text output has no colors when not attached to a terminal.
+exitcode 1 oraclint scan node
+! stdout '\x1b\['
+
+-- node/config.toml --
+[Log]
+Level = 'debug'
+
+[WebServer]
+AllowOrigins = '*'

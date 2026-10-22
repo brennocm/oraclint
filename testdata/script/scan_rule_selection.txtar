@@ -1,0 +1,16 @@
+# Experimental rules are off by default.
+exitcode 0 oraclint scan node
+! stdout NS-WEB-007
+
+# --experimental turns all of them on, --enable a single one.
+exitcode 1 oraclint scan --experimental node
+stdout NS-WEB-007
+exitcode 1 oraclint scan --enable ns-web-007 node
+stdout NS-WEB-007
+
+# --disable wins over everything.
+exitcode 0 oraclint scan --experimental --disable NS-WEB-007 node
+
+-- node/config.toml --
+[WebServer.RateLimit]
+Unauthenticated = 500

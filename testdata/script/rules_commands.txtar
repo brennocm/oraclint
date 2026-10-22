@@ -1,0 +1,20 @@
+# rules list shows every rule in a table, sorted by ID.
+exec oraclint rules list
+stdout '^ID\s+SEVERITY\s+STATUS\s+TARGETS\s+TITLE'
+stdout '^NS-KS-001\s+high\s+stable\s+config\s+Keystore encrypted'
+stdout '^NS-WEB-007\s+low\s+experimental'
+
+exec oraclint rules list --format json
+stdout '"id": "NS-RPC-001"'
+stdout '"cwe": \['
+
+exitcode 2 oraclint rules list --format yaml
+
+# rules explain prints the embedded documentation (case-insensitive ID).
+exec oraclint rules explain ns-rpc-001
+stdout '^# NS-RPC-001: RPC endpoint uses unencrypted transport'
+stdout '## Why it matters'
+
+exitcode 2 oraclint rules explain NS-NOPE-001
+stderr 'unknown rule'
+exitcode 2 oraclint rules explain
