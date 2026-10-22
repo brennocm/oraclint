@@ -1,0 +1,6 @@
+[WebServer]
+AuthenticationMethod = 'ldap'
+
+[WebServer.LDAP]
+ServerTLS = false
+BaseDN = 'dc=example,dc=com'
