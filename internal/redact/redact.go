@@ -33,15 +33,21 @@ const minSecretLen = 4
 // The zero value is ready to use.
 type Redactor struct {
 	secrets []string
+	seen    map[string]bool
 	sorted  bool
 }
 
-// Add registers a secret value. Short and empty values are ignored.
+// Add registers a secret value. Short, empty and already known values are
+// ignored.
 func (r *Redactor) Add(secret string) {
 	secret = strings.TrimSpace(secret)
-	if len(secret) < minSecretLen {
+	if len(secret) < minSecretLen || r.seen[secret] {
 		return
 	}
+	if r.seen == nil {
+		r.seen = map[string]bool{}
+	}
+	r.seen[secret] = true
 	r.secrets = append(r.secrets, secret)
 	r.sorted = false
 }
