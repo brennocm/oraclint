@@ -54,6 +54,17 @@ func TestRedactorApply(t *testing.T) {
 	if got != "a=abc b=**** c=****" {
 		t.Errorf("Apply = %q", got)
 	}
+	// Overlapping secrets of equal length mask the same way whatever the
+	// registration order.
+	var a, b Redactor
+	a.Add("abcd1")
+	a.Add("bcd12")
+	b.Add("bcd12")
+	b.Add("abcd1")
+	if a.Apply("xabcd12x") != b.Apply("xabcd12x") {
+		t.Errorf("result depends on registration order: %q vs %q", a.Apply("xabcd12x"), b.Apply("xabcd12x"))
+	}
+
 	var zero Redactor
 	if zero.Apply("plain") != "plain" {
 		t.Error("zero Redactor should only apply patterns")
