@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"io"
 	"io/fs"
+	"net/url"
+	"path"
+	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -102,7 +105,21 @@ type sarifPhysical struct {
 
 type sarifArtifact struct {
 	URI       string `json:"uri"`
-	URIBaseID string `json:"uriBaseId"`
+	URIBaseID string `json:"uriBaseId,omitempty"`
+}
+
+// artifactFor builds a SARIF artifact location. Paths inside the scan root
+// become percent-encoded relative URIs against %SRCROOT% (what GitHub code
+// scanning expects); paths outside it become absolute file:// URIs.
+func artifactFor(base, file string) sarifArtifact {
+	p := relativePath(base, file)
+	if path.IsAbs(p) || filepath.IsAbs(filepath.FromSlash(p)) {
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p // Windows drive paths: file:///C:/...
+		}
+		return sarifArtifact{URI: (&url.URL{Scheme: "file", Path: p}).String()}
+	}
+	return sarifArtifact{URI: (&url.URL{Path: p}).String(), URIBaseID: "%SRCROOT%"}
 }
 
 type sarifRegion struct {
@@ -167,7 +184,7 @@ func writeSARIF(w io.Writer, rep Report) error {
 			Level:     sarifLevel(f.Severity),
 			Message:   sarifText{Text: f.Message},
 			Locations: []sarifLocation{{PhysicalLocation: sarifPhysical{
-				ArtifactLocation: sarifArtifact{URI: relativePath(rep.BaseDir, f.Location.File), URIBaseID: "%SRCROOT%"},
+				ArtifactLocation: artifactFor(rep.BaseDir, f.Location.File),
 				Region:           sarifRegion{StartLine: line, StartColumn: f.Location.Column},
 			}}},
 		}
