@@ -85,6 +85,9 @@ docker_signs:
 changelog:
   use: github
   sort: asc
+  # SHA and subject only: the default format falls back to "name <email>"
+  # for commits GitHub cannot map to a user.
+  format: "{{ .SHA }}: {{ .Message }}"
   groups:
     - title: Features
       regexp: '^.*?feat(\(.+\))??!?:.+$'
