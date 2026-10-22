@@ -84,6 +84,7 @@ oraclint scan [paths...] [flags]
       --disable strings      rule IDs not to run
       --experimental         also run experimental rules
       --config-file string   oraclint configuration (default ./.oraclint.yaml if present)
+      --ignore-suppressions  ignore .oraclint.yaml and inline directives (audit mode)
       --no-color             disable colors (NO_COLOR is honored too)
   -q, --quiet                print findings only
   -v, --verbose              debug logging to stderr
@@ -136,7 +137,13 @@ ignore:
 ```
 
 A directive without a reason (or with an unknown rule ID) is not applied and is
-reported as an `invalid-suppression` info finding. Suppressed findings are
+reported as an `invalid-suppression` info finding. Rules disabled by the config
+file are listed in every output format.
+
+**Scanning untrusted content** (for example pull requests from forks): the
+content can carry its own `.oraclint.yaml` and directives. Use
+`--ignore-suppressions` (Action input `ignore-suppressions: "true"`) so only
+your own policy applies. Suppressed findings are
 counted in the text summary and kept, marked, in JSON (`suppression`) and SARIF
 (`suppressions[]`), so GitHub closes the alert with the justification attached.
 
@@ -171,7 +178,8 @@ jobs:
           sarif_file: oraclint.sarif
 ```
 
-Inputs: `path`, `format`, `output`, `fail-on`, `min-severity`, `experimental`.
+Inputs: `path`, `format`, `output`, `fail-on`, `min-severity`, `experimental`,
+`ignore-suppressions` (set it to `"true"` for pull requests from forks).
 See [action.yml](action.yml).
 
 ## Rules

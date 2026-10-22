@@ -16,12 +16,27 @@ exitcode 1 oraclint scan unknownid
 stdout 'names unknown rule "NS-NOPE-001"'
 
 # .oraclint.yaml in the working directory: disable and path-scoped ignore.
+# Disabled rules are always disclosed in every format.
 cd withconfig
 exitcode 0 oraclint scan .
 stdout '\(1 suppressed\)'
+stdout 'NS-LOG-001 disabled by .oraclint.yaml: debug logs are required'
 exitcode 0 oraclint scan --format sarif .
 stdout '"kind": "external"'
+stdout '"oraclint/disabledRules"'
+exitcode 0 oraclint scan --format json .
+stdout '"disabled_rules": \['
+stdout '"rule_id": "NS-LOG-001"'
+
+# Audit mode ignores the config file and inline directives.
+exitcode 1 oraclint scan --ignore-suppressions .
+stdout NS-LOG-001
+stdout NS-WEB-001
+! stdout 'suppressed'
+! stdout 'disabled by'
 cd ..
+exitcode 1 oraclint scan --ignore-suppressions inline
+stdout NS-WEB-001
 
 # A config entry without a reason is a usage error.
 exitcode 2 oraclint scan --config-file bad.yaml inline

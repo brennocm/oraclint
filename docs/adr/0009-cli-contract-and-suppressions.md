@@ -53,6 +53,12 @@ truncated file; `--output` files are created with mode `0600` because a report
 maps the weak spots of a deployment. Colors are used only on a terminal and
 respect `NO_COLOR` and `--no-color`.
 
+*Amended 2026-10-22:* scanned content can bring its own `.oraclint.yaml` and
+directives, so a pull request could silence rules for itself. Rules disabled
+by the config are now listed in every output format, and
+`--ignore-suppressions` (Action input `ignore-suppressions`) ignores both the
+config file and inline directives for untrusted content.
+
 ## Alternatives considered
 
 - **Exit 1 for any error:** CI could not tell "insecure" from "broken scan".
