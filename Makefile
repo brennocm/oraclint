@@ -40,8 +40,10 @@ fuzz:
 		done; \
 	done
 
+# Only these packages define the -update flag (golden files and the README
+# rule table); passing it to the others would fail.
 golden-update:
-	go test ./... -run Golden -update
+	go test ./internal/report/ ./internal/rules/ -run Golden -update
 
 demo: build
 	PATH="$(CURDIR)/bin:$$PATH" vhs demo.tape
