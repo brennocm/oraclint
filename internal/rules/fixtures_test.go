@@ -13,12 +13,20 @@ import (
 // fixtureRoot holds testdata/<RULE-ID>/{vulnerable,safe}/ for every rule.
 var fixtureRoot = filepath.Join("..", "..", "testdata")
 
+// noFixtureRules are tested without files under testdata/, with the reason.
+var noFixtureRules = map[string]string{
+	"NS-FS-001": "file permission bits are not tracked by git; tested with chmod in a temp dir",
+}
+
 // TestFixtures checks every rule against its fixture files: each file under
 // vulnerable/ must produce at least one finding of that rule, each file under
 // safe/ must produce none.
 func TestFixtures(t *testing.T) {
 	for _, r := range All() {
 		m := r.Metadata()
+		if _, skip := noFixtureRules[m.ID]; skip {
+			continue
+		}
 		t.Run(m.ID, func(t *testing.T) {
 			for _, dir := range []string{"vulnerable", "safe"} {
 				files, err := filepath.Glob(filepath.Join(fixtureRoot, m.ID, dir, "*"))
