@@ -29,6 +29,10 @@ linters:
       - path: _test\.go
         linters: [gosec]
         text: "G304"
+      # Test fixtures contain fake credentials on purpose.
+      - path: _test\.go
+        linters: [gosec]
+        text: "G101"
 
 formatters:
   enable:
