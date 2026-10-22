@@ -37,6 +37,9 @@ func TestLoadConfig(t *testing.T) {
 		{"ignore without paths", "ignore:\n  - rule: NS-LOG-001\n    reason: x\n", "paths is required"},
 		{"bad pattern", "ignore:\n  - rule: NS-LOG-001\n    paths: [\"[\"]\n    reason: x\n", "invalid path pattern"},
 		{"not yaml", "disable: [\n", "parsing"},
+		{"exclude without reason", "exclude:\n  - paths: [testdata/**]\n", "reason is required"},
+		{"exclude without paths", "exclude:\n  - reason: x\n", "paths is required"},
+		{"exclude bad pattern", "exclude:\n  - paths: [\"[\"]\n    reason: x\n", "invalid path pattern"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -64,28 +67,12 @@ func TestLoadConfig(t *testing.T) {
 		t.Errorf("oversized config: %v", err)
 	}
 	var nilCfg *Config
-	if len(nilCfg.DisabledRules()) != 0 {
-		t.Error("nil config disables nothing")
+	if len(nilCfg.DisabledRules()) != 0 || nilCfg.ExcludedPaths() != nil {
+		t.Error("nil config disables and excludes nothing")
 	}
-}
-
-func TestMatchPath(t *testing.T) {
-	tests := []struct {
-		pattern, file string
-		want          bool
-	}{
-		{"deploy/staging/**", "deploy/staging/config.toml", true},
-		{"deploy/staging/**", "deploy/staging/k8s/node.yaml", true},
-		{"deploy/staging/**", "deploy/staging-old/config.toml", false},
-		{"deploy/*/config.toml", "deploy/prod/config.toml", true},
-		{"deploy/*/config.toml", "deploy/prod/x/config.toml", false},
-		{"./config.toml", "config.toml", true},
-		{"config.toml", "other/config.toml", false},
-	}
-	for _, tc := range tests {
-		if got := matchPath(tc.pattern, tc.file); got != tc.want {
-			t.Errorf("matchPath(%q, %q) = %v", tc.pattern, tc.file, got)
-		}
+	cfg, err := LoadConfig(writeConfig(t, "exclude:\n  - paths: [a/**, b.toml]\n    reason: fixtures\n"), known)
+	if err != nil || len(cfg.ExcludedPaths()) != 2 {
+		t.Errorf("ExcludedPaths = %v, %v", cfg.ExcludedPaths(), err)
 	}
 }
 

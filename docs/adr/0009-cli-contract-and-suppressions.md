@@ -59,6 +59,13 @@ by the config are now listed in every output format, and
 `--ignore-suppressions` (Action input `ignore-suppressions`) ignores both the
 config file and inline directives for untrusted content.
 
+*Amended 2026-10-22 (second review):* there was no way to leave paths out of
+a scan, so fixtures and intentionally unparsable files produced findings that
+could not be suppressed (`parse-error` is not a rule). `exclude` entries in
+the config (reason required, disclosed in every output, ignored in audit mode)
+and the `--exclude` flag skip paths while walking directories; files named
+explicitly are never excluded.
+
 ## Alternatives considered
 
 - **Exit 1 for any error:** CI could not tell "insecure" from "broken scan".
