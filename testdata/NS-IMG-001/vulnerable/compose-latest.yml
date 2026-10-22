@@ -1,0 +1,5 @@
+services:
+  chainlink:
+    image: smartcontract/chainlink:latest
+  postgres:
+    image: postgres

@@ -280,6 +280,63 @@
               }
             },
             {
+              "id": "NS-ENV-001",
+              "name": "NodeSecretsInADotenvFile",
+              "shortDescription": {
+                "text": "Node secrets in a dotenv file"
+              },
+              "fullDescription": {
+                "text": "Node secrets in a dotenv file. Keep the file out of version control (.gitignore) and outside the repository, or use Docker/Kubernetes secrets."
+              },
+              "help": {
+                "text": "Keep the file out of version control (.gitignore) and outside the repository, or use Docker/Kubernetes secrets.",
+                "markdown": "# NS-ENV-001: Node secrets in a dotenv file\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | env | stable | CWE-312, CWE-538 |\n\n## Description\n\nFires for every non-empty node secret variable in a dotenv file (`.env`,\n`.env.*`, `*.env`) inside the scanned tree: `CL_DATABASE_URL`,\n`CL_DATABASE_BACKUP_URL`, `CL_PASSWORD_KEYSTORE`, `CL_PASSWORD_VRF`,\n`CL_PYROSCOPE_AUTH_TOKEN`, `CL_PROMETHEUS_AUTH_TOKEN`, `CL_THRESHOLD_KEY_SHARE`\nand `POSTGRES_PASSWORD`.\n\nTemplate files ending in `.example`, `.sample`, `.template`, `.dist` or `.tmpl`\nare not scanned by default.\n\n## Why it matters\n\nDocker Compose reads `.env` automatically, so it is a convenient place for\nthe node's secrets, and an easy file to commit or include in an image build\ncontext by accident. If it lives in the repository directory, one `git add .`\npublishes the keystore password.\n\n## Vulnerable example\n\n```sh\n# .env in the repository\nCL_PASSWORD_KEYSTORE=...\n```\n\n## Fixed example\n\nKeep the file outside the repository (or at least in `.gitignore` and\n`.dockerignore`), or use Docker secrets / Kubernetes Secrets.\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md\n- https://docs.docker.com/compose/how-tos/use-secrets/\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-ENV-001.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "env",
+                  "CWE-312",
+                  "CWE-538"
+                ]
+              }
+            },
+            {
+              "id": "NS-ENV-002",
+              "name": "NodeSecretAsLiteralEnvironmentValue",
+              "shortDescription": {
+                "text": "Node secret as literal environment value"
+              },
+              "fullDescription": {
+                "text": "Node secret as literal environment value. Reference the value instead: compose secrets: or ${VAR} interpolation, Kubernetes valueFrom.secretKeyRef; rotate the exposed secret."
+              },
+              "help": {
+                "text": "Reference the value instead: compose secrets: or ${VAR} interpolation, Kubernetes valueFrom.secretKeyRef; rotate the exposed secret.",
+                "markdown": "# NS-ENV-002: Node secret as literal environment value\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | compose, k8s | stable | CWE-798, CWE-312 |\n\n## Description\n\nFires when a node secret variable (see NS-ENV-001 for the list) is given a\nliteral value:\n\n- in compose `environment:` (map or list syntax), unless the value uses\n  `${VAR}`/`$VAR` interpolation or is passed through from the host (`- VAR`);\n- in a Kubernetes container `env:` entry with `value:` instead of\n  `valueFrom.secretKeyRef`.\n\n## Why it matters\n\nCompose files and manifests are committed, reviewed in pull requests and\ncopied between environments. A literal secret in them is readable by everyone\nwith repository access, and it also appears in `docker inspect`,\n`kubectl get -o yaml` and CI logs.\n\n## Vulnerable example\n\n```yaml\nenvironment:\n  CL_PASSWORD_KEYSTORE: my-keystore-password\n```\n\n## Fixed example\n\n```yaml\n# compose\nenvironment:\n  CL_PASSWORD_KEYSTORE: ${CL_PASSWORD_KEYSTORE}\n\n# kubernetes\nenv:\n  - name: CL_PASSWORD_KEYSTORE\n    valueFrom:\n      secretKeyRef: {name: chainlink-secrets, key: keystore-password}\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md\n- https://docs.docker.com/compose/how-tos/use-secrets/\n- https://kubernetes.io/docs/concepts/configuration/secret/\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-ENV-002.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "compose",
+                  "k8s",
+                  "CWE-798",
+                  "CWE-312"
+                ]
+              }
+            },
+            {
               "id": "NS-FS-001",
               "name": "SecretsFileAccessibleByGroupOrOthers",
               "shortDescription": {
@@ -307,6 +364,35 @@
               }
             },
             {
+              "id": "NS-IMG-001",
+              "name": "ContainerImageNotPinned",
+              "shortDescription": {
+                "text": "Container image not pinned"
+              },
+              "fullDescription": {
+                "text": "Container image not pinned. Pin an explicit version tag, ideally with a digest: smartcontract/chainlink:2.69.0@sha256:\u003cdigest\u003e."
+              },
+              "help": {
+                "text": "Pin an explicit version tag, ideally with a digest: smartcontract/chainlink:2.69.0@sha256:\u003cdigest\u003e.",
+                "markdown": "# NS-IMG-001: Container image not pinned\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | compose, k8s | stable | CWE-1357, CWE-494 |\n\n## Description\n\nFires for every compose service image and Kubernetes container or init\ncontainer image that has no tag (which means `latest`) or the `latest` tag, and\nno `@sha256:` digest. Interpolated references (`${VERSION}`) are skipped.\n\n## Why it matters\n\nUnpinned images change under you: a restart can pull an untested node\nrelease (with new config defaults or database migrations) or a tampered image.\nA version tag makes deployments reproducible; a digest also protects against a\ntag being moved. The node documentation states that the `latest` tag does not\nwork for the node image.\n\n## Vulnerable example\n\n```yaml\nservices:\n  chainlink:\n    image: smartcontract/chainlink:latest\n  postgres:\n    image: postgres\n```\n\n## Fixed example\n\n```yaml\nservices:\n  chainlink:\n    image: smartcontract/chainlink:2.69.0@sha256:\u003cdigest\u003e\n  postgres:\n    image: postgres:16.4\n```\n\n## References\n\n- https://docs.chain.link/chainlink-nodes/v1/running-a-chainlink-node\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-IMG-001.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "compose",
+                  "k8s",
+                  "CWE-1357",
+                  "CWE-494"
+                ]
+              }
+            },
+            {
               "id": "NS-INS-001",
               "name": "DevelopmentOnlyInsecureFlagEnabled",
               "shortDescription": {
@@ -330,6 +416,87 @@
                   "security",
                   "config",
                   "CWE-489"
+                ]
+              }
+            },
+            {
+              "id": "NS-K8S-001",
+              "name": "PrivilegedPodOrHostNamespace",
+              "shortDescription": {
+                "text": "Privileged pod or host namespace"
+              },
+              "fullDescription": {
+                "text": "Privileged pod or host namespace. Remove hostNetwork, hostPID, hostIPC and securityContext.privileged."
+              },
+              "help": {
+                "text": "Remove hostNetwork, hostPID, hostIPC and securityContext.privileged.",
+                "markdown": "# NS-K8S-001: Privileged pod or host namespace\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | k8s | stable | CWE-250 |\n\n## Description\n\nFires for workloads (Pod, Deployment, StatefulSet, DaemonSet, ReplicaSet,\nReplicationController, Job, CronJob) whose pod spec sets `hostNetwork`,\n`hostPID` or `hostIPC` to `true`, and for every container or init container\nwith `securityContext.privileged: true`.\n\n## Why it matters\n\nThese settings are forbidden by the Kubernetes \"baseline\" Pod Security\nStandard because they break the isolation between the pod and the worker\nnode. A compromised container could read other pods' traffic, processes and\nsecrets on that node.\n\n## Vulnerable example\n\n```yaml\nspec:\n  template:\n    spec:\n      hostNetwork: true\n```\n\n## Fixed example\n\n```yaml\nspec:\n  template:\n    spec:\n      containers:\n        - name: node\n          image: smartcontract/chainlink:2.69.0\n```\n\n## References\n\n- https://kubernetes.io/docs/concepts/security/pod-security-standards/\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-K8S-001.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "k8s",
+                  "CWE-250"
+                ]
+              }
+            },
+            {
+              "id": "NS-K8S-002",
+              "name": "ContainerSecuritycontextNotHardened",
+              "shortDescription": {
+                "text": "Container securityContext not hardened"
+              },
+              "fullDescription": {
+                "text": "Container securityContext not hardened. Set allowPrivilegeEscalation: false, runAsNonRoot: true and readOnlyRootFilesystem: true (mount a writable volume for the node's root directory)."
+              },
+              "help": {
+                "text": "Set allowPrivilegeEscalation: false, runAsNonRoot: true and readOnlyRootFilesystem: true (mount a writable volume for the node's root directory).",
+                "markdown": "# NS-K8S-002: Container securityContext not hardened\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | k8s | stable | CWE-250 |\n\n## Description\n\nFires once per container or init container that lacks any of:\n\n- `allowPrivilegeEscalation: false`;\n- `runAsNonRoot: true` (container level, or inherited from the pod's\n  `securityContext` when the container does not set it);\n- `readOnlyRootFilesystem: true`.\n\nThe message lists exactly which settings are missing. (This rule also covers\nwhat was planned as NS-K8S-003, so that one container yields one finding.)\n\n## Why it matters\n\nThese are the core settings of the Kubernetes \"restricted\" profile. They limit\nwhat an attacker can do after exploiting the container: no setuid escalation,\nno root inside the container, and no persistence by modifying the image's\nfiles. The node writes to its root directory, so mount a writable volume there\nwhen enabling a read-only root filesystem.\n\n## Vulnerable example\n\n```yaml\ncontainers:\n  - name: node\n    image: smartcontract/chainlink:2.69.0\n```\n\n## Fixed example\n\n```yaml\nsecurityContext:\n  runAsNonRoot: true\n  runAsUser: 14933\ncontainers:\n  - name: node\n    image: smartcontract/chainlink:2.69.0\n    securityContext:\n      allowPrivilegeEscalation: false\n      readOnlyRootFilesystem: true\n```\n\n## References\n\n- https://kubernetes.io/docs/concepts/security/pod-security-standards/\n- https://kubernetes.io/docs/tasks/configure-pod-container/security-context/\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-K8S-002.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "k8s",
+                  "CWE-250"
+                ]
+              }
+            },
+            {
+              "id": "NS-K8S-004",
+              "name": "OperatorUiExposedByAKubernetesService",
+              "shortDescription": {
+                "text": "Operator UI exposed by a Kubernetes Service"
+              },
+              "fullDescription": {
+                "text": "Operator UI exposed by a Kubernetes Service. Use a ClusterIP Service and reach the UI with kubectl port-forward, a VPN or an authenticated ingress restricted to operators."
+              },
+              "help": {
+                "text": "Use a ClusterIP Service and reach the UI with kubectl port-forward, a VPN or an authenticated ingress restricted to operators.",
+                "markdown": "# NS-K8S-004: Operator UI exposed by a Kubernetes Service\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | k8s | stable | CWE-668 |\n\n## Description\n\nFires for every port of a `Service` of type `LoadBalancer` or `NodePort`\nwhose `port` or numeric `targetPort` is `6688` or `6689` (the node's default\nHTTP and HTTPS ports). Named target ports are not resolved.\n\n## Why it matters\n\n`LoadBalancer` and `NodePort` Services make the port reachable from outside\nthe cluster, usually from the internet. The operator UI and API should only be\nreachable by operators, for example through `kubectl port-forward`, a VPN or\nan authenticated ingress restricted to them.\n\n## Vulnerable example\n\n```yaml\nkind: Service\nspec:\n  type: LoadBalancer\n  ports:\n    - port: 6688\n```\n\n## Fixed example\n\n```yaml\nkind: Service\nspec:\n  type: ClusterIP\n  ports:\n    - port: 6688\n```\n\n## References\n\n- https://docs.chain.link/chainlink-nodes/resources/best-security-practices\n- https://kubernetes.io/docs/concepts/services-networking/service/\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-K8S-004.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "k8s",
+                  "CWE-668"
                 ]
               }
             },
@@ -831,7 +998,7 @@
       "results": [
         {
           "ruleId": "NS-KS-001",
-          "ruleIndex": 12,
+          "ruleIndex": 18,
           "level": "error",
           "message": {
             "text": "InsecureFastScrypt = true makes every keystore use weak scrypt parameters"
@@ -853,7 +1020,7 @@
         },
         {
           "ruleId": "NS-RPC-001",
-          "ruleIndex": 16,
+          "ruleIndex": 22,
           "level": "error",
           "message": {
             "text": "EVM chain \"1\" node \"a\": WSURL uses unencrypted ws:// to rpc.example.com"

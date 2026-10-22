@@ -1,0 +1,6 @@
+services:
+  chainlink:
+    image: smartcontract/chainlink:2.69.0
+    environment:
+      CL_DATABASE_URL: ${CL_DATABASE_URL}
+      CL_PASSWORD_KEYSTORE: ${CL_PASSWORD_KEYSTORE}
