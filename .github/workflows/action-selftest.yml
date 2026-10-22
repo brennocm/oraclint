@@ -1,12 +1,17 @@
 # Runs the repository's own GitHub Action against the example deployments:
-# the insecure one must produce findings (uploaded to code scanning), the
-# hardened one must pass.
+# the insecure one must produce findings, the hardened one must pass.
+#
+# The insecure example's SARIF is uploaded to code scanning only when the
+# workflow is started manually (to check the code scanning integration), so
+# the repository's Security tab does not fill up with alerts from a
+# deliberately insecure example.
 name: Action self-test
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -36,8 +41,8 @@ jobs:
           echo "results: $count"
           test "$count" -gt 30
 
-      - name: Upload SARIF to code scanning
-        if: github.event_name == 'push'
+      - name: Upload SARIF to code scanning (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           sarif_file: insecure.sarif
