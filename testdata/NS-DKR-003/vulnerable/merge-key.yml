@@ -1,0 +1,6 @@
+x-defaults: &defaults
+  privileged: true
+services:
+  chainlink:
+    <<: *defaults
+    image: smartcontract/chainlink:2.69.0

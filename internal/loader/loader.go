@@ -279,6 +279,9 @@ func (l *loader) loadFile(open opener, display string, c class) {
 			return
 		}
 		t.YAML = docs
+		// Reported even for weakly classified files: once a file is known to
+		// be a compose file or manifest, an ambiguous value is an evasion risk.
+		l.res.Problems = append(l.res.Problems, model.DuplicateKeys(display, docs)...)
 
 	case formatEnv:
 		vars, err := model.ParseEnv(display, data)
