@@ -107,6 +107,7 @@ func (l *loader) loadForced() error {
 func (l *loader) loadMergedConfig(paths []string) error {
 	var roots []*model.Value
 	var files []string
+	var directives []model.Directive
 	for _, path := range paths {
 		if err := l.requireRegularFile(path); err != nil {
 			return err
@@ -124,15 +125,17 @@ func (l *loader) loadMergedConfig(paths []string) error {
 		}
 		roots = append(roots, root)
 		files = append(files, display)
+		directives = append(directives, model.ParseDirectives(display, data)...)
 	}
 	if len(roots) == 0 {
 		return nil
 	}
 	t := &model.Target{
-		Kind:  model.KindConfig,
-		Path:  files[0],
-		Files: files,
-		TOML:  &model.TOMLDoc{Kind: model.KindConfig, Root: model.Merge(roots...)},
+		Kind:       model.KindConfig,
+		Path:       files[0],
+		Files:      files,
+		TOML:       &model.TOMLDoc{Kind: model.KindConfig, Root: model.Merge(roots...)},
+		Directives: directives,
 	}
 	if len(files) == 1 {
 		t.Mode = l.mode(paths[0])
@@ -231,7 +234,10 @@ func (l *loader) loadFile(path string, c class) {
 	if !ok {
 		return
 	}
-	t := &model.Target{Kind: c.kind, Path: display, Files: []string{display}, Mode: l.mode(path)}
+	t := &model.Target{
+		Kind: c.kind, Path: display, Files: []string{display}, Mode: l.mode(path),
+		Directives: model.ParseDirectives(display, data),
+	}
 
 	switch c.format {
 	case formatTOML:

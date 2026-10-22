@@ -75,6 +75,20 @@ type Target struct {
 	TOML *TOMLDoc     // KindConfig, KindSecrets
 	YAML []*yaml.Node // KindCompose (one document), KindK8s (one per document)
 	Env  []EnvVar     // KindEnv
+
+	// Directives are the "# oraclint:ignore" comments found in the files of
+	// this target.
+	Directives []Directive
+}
+
+// Directive is an inline "# oraclint:ignore RULE-ID reason=\"...\"" comment.
+// It applies to findings on its own line or on the line below it.
+type Directive struct {
+	Loc     Location
+	RuleIDs []string
+	Reason  string
+	// Problem explains why the directive is invalid ("" when valid).
+	Problem string
 }
 
 // ParseError describes a file that could not be parsed. It never contains
