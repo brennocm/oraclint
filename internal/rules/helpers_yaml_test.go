@@ -103,6 +103,30 @@ spec:
 	}
 }
 
+func TestComposeValue(t *testing.T) {
+	tests := []struct {
+		raw, value string
+		literal    bool
+	}{
+		{"plain", "plain", true},
+		{"pa$$word", "pa$word", true},
+		{"${KS}", "${KS}", false},
+		{"$KS", "$KS", false},
+		{"${KS:-changeme}", "changeme", true},
+		{"${KS-changeme}", "changeme", true},
+		{"${KS:-}", "${KS:-}", false},
+		{"${KS:?required}", "${KS:?required}", false},
+		{"${KS:-${OTHER}}", "${KS:-${OTHER}}", false},
+		{"postgresql://u:${PG}@db/x", "postgresql://u:${PG}@db/x", false},
+	}
+	for _, tc := range tests {
+		value, literal := composeValue(tc.raw)
+		if value != tc.value || literal != tc.literal {
+			t.Errorf("composeValue(%q) = %q, %v; want %q, %v", tc.raw, value, literal, tc.value, tc.literal)
+		}
+	}
+}
+
 func TestPodSpecs(t *testing.T) {
 	src := `apiVersion: v1
 kind: Pod
