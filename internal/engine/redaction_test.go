@@ -108,7 +108,7 @@ func isFuzzSecret(s string) bool {
 		return false
 	}
 	const alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	return strings.Trim(s, alnum) == "" && !strings.ContainsFunc(s, func(r rune) bool { return !strings.ContainsRune(alnum, r) })
+	return strings.Trim(s, alnum) == "" // empty only if every character is alphanumeric
 }
 
 func write(t *testing.T, dir, name, content string) {
