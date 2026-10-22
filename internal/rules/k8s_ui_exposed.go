@@ -27,7 +27,7 @@ func (k8sUIExposed) Metadata() Metadata {
 
 func (r k8sUIExposed) Check(t *model.Target) []Finding {
 	var out []Finding
-	for _, doc := range t.YAML {
+	for _, doc := range k8sObjects(t) {
 		if kind, _ := model.ScalarString(model.MapValue(doc, "kind")); kind != "Service" {
 			continue
 		}
