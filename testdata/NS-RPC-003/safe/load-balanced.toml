@@ -1,0 +1,8 @@
+[[EVM]]
+ChainID = '1'
+
+[[EVM.Nodes]]
+Name = 'lb'
+WSURL = 'wss://rpc-lb.example.com/ws'
+HTTPURL = 'https://rpc-lb.example.com'
+IsLoadBalancedRPC = true

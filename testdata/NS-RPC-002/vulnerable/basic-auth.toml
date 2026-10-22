@@ -1,0 +1,6 @@
+[[EVM]]
+ChainID = '1'
+
+[[EVM.Nodes]]
+Name = 'self-hosted'
+HTTPURL = 'https://rpcuser:example-password@rpc.example.com'
