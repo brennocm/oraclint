@@ -1,0 +1,67 @@
+{
+  "schema_version": "1",
+  "tool": {
+    "name": "oraclint",
+    "version": "v0.0.0-test",
+    "information_uri": "https://github.com/brennocm/oraclint"
+  },
+  "summary": {
+    "files_scanned": 3,
+    "total": 4,
+    "by_severity": {
+      "critical": 0,
+      "high": 4,
+      "medium": 0,
+      "low": 0,
+      "info": 0
+    }
+  },
+  "findings": [
+    {
+      "rule_id": "NS-KS-001",
+      "severity": "high",
+      "title": "Title of NS-KS-001",
+      "message": "InsecureFastScrypt = true makes every keystore use weak scrypt parameters",
+      "location": {
+        "file": "node/config.toml",
+        "line": 1,
+        "column": 1
+      },
+      "remediation": "Fix NS-KS-001."
+    },
+    {
+      "rule_id": "NS-RPC-001",
+      "severity": "high",
+      "title": "Title of NS-RPC-001",
+      "message": "EVM chain \"1\" node \"a\": WSURL uses unencrypted ws:// to rpc.example.com",
+      "location": {
+        "file": "node/config.toml",
+        "line": 12,
+        "column": 1
+      },
+      "remediation": "Fix NS-RPC-001."
+    },
+    {
+      "rule_id": "NS-DB-002",
+      "severity": "high",
+      "title": "Title of NS-DB-002",
+      "message": "Database.URL connects to db.example.com with sslmode=disable",
+      "location": {
+        "file": "node/secrets.toml",
+        "line": 2,
+        "column": 1
+      },
+      "remediation": "Fix NS-DB-002."
+    },
+    {
+      "rule_id": "parse-error",
+      "severity": "high",
+      "title": "Title of parse-error",
+      "message": "invalid YAML",
+      "location": {
+        "file": "ops/docker-compose.yml"
+      },
+      "remediation": "Fix parse-error."
+    }
+  ]
+}

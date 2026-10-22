@@ -1,0 +1,15 @@
+node/config.toml
+  1:1     HIGH     NS-KS-001    InsecureFastScrypt = true makes every keystore use weak scrypt parameters
+          fix: Fix NS-KS-001.
+  12:1    HIGH     NS-RPC-001   EVM chain "1" node "a": WSURL uses unencrypted ws:// to rpc.example.com
+          fix: Fix NS-RPC-001.
+
+node/secrets.toml
+  2:1     HIGH     NS-DB-002    Database.URL connects to db.example.com with sslmode=disable
+          fix: Fix NS-DB-002.
+
+ops/docker-compose.yml
+  -       HIGH     parse-error  invalid YAML
+          fix: Fix parse-error.
+
+4 findings in 3 files: 0 critical, 4 high, 0 medium, 0 low, 0 info
