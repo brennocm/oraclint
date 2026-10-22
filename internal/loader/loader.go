@@ -10,9 +10,9 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/brennocm/oraclint/internal/model"
 )
@@ -96,7 +96,7 @@ func (l *loader) loadForced() error {
 				return err
 			}
 			l.markSeen(path)
-			l.loadFile(path, forcedClass(f.kind))
+			l.loadFile(openPath(path), displayPath(path), forcedClass(f.kind))
 		}
 	}
 	return nil
@@ -108,13 +108,14 @@ func (l *loader) loadMergedConfig(paths []string) error {
 	var roots []*model.Value
 	var files []string
 	var directives []model.Directive
+	var modes []fs.FileMode
 	for _, path := range paths {
 		if err := l.requireRegularFile(path); err != nil {
 			return err
 		}
 		l.markSeen(path)
 		display := displayPath(path)
-		data, ok := l.read(path, display, true)
+		data, mode, ok := l.read(openPath(path), display, true)
 		if !ok {
 			continue
 		}
@@ -125,6 +126,7 @@ func (l *loader) loadMergedConfig(paths []string) error {
 		}
 		roots = append(roots, root)
 		files = append(files, display)
+		modes = append(modes, mode)
 		directives = append(directives, model.ParseDirectives(display, data)...)
 	}
 	if len(roots) == 0 {
@@ -138,7 +140,7 @@ func (l *loader) loadMergedConfig(paths []string) error {
 		Directives: directives,
 	}
 	if len(files) == 1 {
-		t.Mode = l.mode(paths[0])
+		t.Mode = modes[0]
 	}
 	l.res.Targets = append(l.res.Targets, t)
 	return nil
@@ -154,19 +156,27 @@ func (l *loader) loadPath(path string) error {
 			return fmt.Errorf("cannot scan %s: not a regular file", path)
 		}
 		if l.markSeen(path) {
-			l.loadFile(path, classifyByName(filepath.Base(path)))
+			l.loadFile(openPath(path), displayPath(path), classifyByName(filepath.Base(path)))
 		}
 		return nil
 	}
 	return l.walk(path)
 }
 
-func (l *loader) walk(root string) error {
-	realRoot, err := filepath.EvalSymlinks(root)
+// walk scans a directory through an os.Root. Every open is resolved by the
+// kernel relative to the root and may not leave it, even through symlinks or
+// ".." components, and even if the tree changes during the scan (no
+// check-then-open race). A malicious repository therefore cannot make
+// oraclint read files such as ~/.ssh/id_rsa or /etc/shadow.
+func (l *loader) walk(dir string) error {
+	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return fmt.Errorf("cannot resolve %s: %w", root, err)
+		return fmt.Errorf("cannot scan %s: %w", dir, err)
 	}
-	return filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+	defer root.Close() //nolint:errcheck // read-only directory handle
+
+	return fs.WalkDir(root.FS(), ".", func(rel string, d fs.DirEntry, walkErr error) error {
+		path := filepath.Join(dir, filepath.FromSlash(rel))
 		if walkErr != nil {
 			l.opts.Logger.Warn("skipping unreadable path", "path", path, "error", walkErr)
 			if d != nil && d.IsDir() {
@@ -175,7 +185,7 @@ func (l *loader) walk(root string) error {
 			return nil
 		}
 		if d.IsDir() {
-			if path != root && skipDir(d.Name()) {
+			if rel != "." && skipDir(d.Name()) {
 				return fs.SkipDir
 			}
 			return nil
@@ -185,57 +195,50 @@ func (l *loader) walk(root string) error {
 			return nil // not a file type oraclint looks at
 		}
 		if d.Type()&fs.ModeSymlink != 0 {
-			if !l.symlinkInside(path, realRoot) {
+			// Root.Stat follows the link but fails if it leaves the root.
+			info, err := root.Stat(rel)
+			if err != nil {
+				l.opts.Logger.Warn("skipping symlink that is broken or points outside the scan root", "path", path)
+				return nil
+			}
+			if !info.Mode().IsRegular() {
 				return nil
 			}
 		} else if !d.Type().IsRegular() {
-			return nil
+			return nil // sockets, FIFOs, devices
 		}
 		if l.markSeen(path) {
-			l.loadFile(path, c)
+			l.loadFile(func() (*os.File, error) { return root.Open(rel) }, displayPath(path), c)
 		}
 		return nil
 	})
 }
 
-// symlinkInside reports whether a symlink resolves to a regular file inside
-// the scan root. Links that escape the root are skipped so a malicious
-// repository cannot make oraclint read (and possibly echo) files such as
-// ~/.ssh/id_rsa or /etc/shadow.
-func (l *loader) symlinkInside(path, realRoot string) bool {
-	target, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		l.opts.Logger.Debug("skipping broken symlink", "path", path)
-		return false
+// opener opens the file to read. It abstracts over plain paths (files named
+// on the command line) and os.Root-relative paths (files found by walk).
+type opener func() (*os.File, error)
+
+func openPath(path string) opener {
+	return func() (*os.File, error) {
+		return os.Open(path) //nolint:gosec // reading user-selected files is the purpose of this tool
 	}
-	rel, err := filepath.Rel(realRoot, target)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
-		l.opts.Logger.Warn("skipping symlink that points outside the scan root", "path", path)
-		return false
-	}
-	info, err := os.Stat(target)
-	if err != nil || !info.Mode().IsRegular() {
-		return false
-	}
-	return true
 }
 
 // loadFile parses one file according to its class. For strong classes (file
 // name or flag) parse errors are reported. For files picked only by extension
 // (any *.toml, *.yaml) they are logged and ignored, because such files are
 // usually not node files at all (for example Helm templates).
-func (l *loader) loadFile(path string, c class) {
+func (l *loader) loadFile(open opener, display string, c class) {
 	if c.format == formatNone {
-		l.opts.Logger.Debug("skipping file of unknown type", "path", path)
+		l.opts.Logger.Debug("skipping file of unknown type", "path", display)
 		return
 	}
-	display := displayPath(path)
-	data, ok := l.read(path, display, c.strong)
+	data, mode, ok := l.read(open, display, c.strong)
 	if !ok {
 		return
 	}
 	t := &model.Target{
-		Kind: c.kind, Path: display, Files: []string{display}, Mode: l.mode(path),
+		Kind: c.kind, Path: display, Files: []string{display}, Mode: mode,
 		Directives: model.ParseDirectives(display, data),
 	}
 
@@ -247,7 +250,7 @@ func (l *loader) loadFile(path string, c class) {
 			return
 		}
 		if t.Kind == 0 {
-			t.Kind = classifyTOML(filepath.Base(path), root)
+			t.Kind = classifyTOML(path.Base(display), root)
 		}
 		if t.Kind == 0 {
 			l.opts.Logger.Debug("skipping TOML file that is not a node config", "path", display)
@@ -288,22 +291,29 @@ func (l *loader) loadFile(path string, c class) {
 	l.res.Targets = append(l.res.Targets, t)
 }
 
-// read returns the file content, enforcing the size limit. Oversized files
-// that look relevant are reported as problems.
-func (l *loader) read(path, display string, report bool) ([]byte, bool) {
-	f, err := os.Open(path) //nolint:gosec // reading user-selected files is the purpose of this tool
+// read returns the file content and permission bits, enforcing the size
+// limit. Oversized files that look relevant are reported as problems. The
+// mode comes from the open descriptor, so it describes the file actually read.
+func (l *loader) read(open opener, display string, report bool) ([]byte, fs.FileMode, bool) {
+	cannotRead := &model.ParseError{Loc: model.Location{File: display}, Msg: "cannot read file"}
+	f, err := open()
 	if err != nil {
-		l.problem(&model.ParseError{Loc: model.Location{File: display}, Msg: "cannot read file"}, display)
-		return nil, false
+		l.problem(cannotRead, display)
+		return nil, 0, false
 	}
 	defer f.Close() //nolint:errcheck // read-only file; Close cannot lose data
+
+	var mode fs.FileMode
+	if info, err := f.Stat(); err == nil {
+		mode = info.Mode().Perm()
+	}
 
 	// Read at most one byte more than the limit, so we can tell "exactly at
 	// the limit" from "too big" without trusting Stat (the file may change).
 	data, err := io.ReadAll(io.LimitReader(f, l.opts.MaxFileSize+1))
 	if err != nil {
-		l.problem(&model.ParseError{Loc: model.Location{File: display}, Msg: "cannot read file"}, display)
-		return nil, false
+		l.problem(cannotRead, display)
+		return nil, 0, false
 	}
 	if int64(len(data)) > l.opts.MaxFileSize {
 		msg := fmt.Sprintf("file is larger than %d bytes and was not scanned", l.opts.MaxFileSize)
@@ -312,9 +322,9 @@ func (l *loader) read(path, display string, report bool) ([]byte, bool) {
 		} else {
 			l.opts.Logger.Warn("skipping large file", "path", display)
 		}
-		return nil, false
+		return nil, 0, false
 	}
-	return data, true
+	return data, mode, true
 }
 
 func (l *loader) parseFailed(err error, display string, report bool) {
@@ -331,14 +341,6 @@ func (l *loader) problem(err error, display string) {
 		pe = &model.ParseError{Loc: model.Location{File: display}, Msg: "cannot parse file"}
 	}
 	l.res.Problems = append(l.res.Problems, pe)
-}
-
-func (l *loader) mode(path string) fs.FileMode {
-	info, err := os.Stat(path)
-	if err != nil {
-		return 0
-	}
-	return info.Mode().Perm()
 }
 
 // markSeen records path and reports whether it was new.
