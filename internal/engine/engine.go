@@ -62,7 +62,7 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 	for _, t := range targets {
 		for _, r := range selected {
 			if r.Metadata().AppliesTo(t.Kind) {
-				findings = append(findings, r.Check(t)...)
+				findings = append(findings, check(r, t)...)
 			}
 		}
 	}
@@ -97,6 +97,27 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 	}
 	Sort(kept)
 	return kept
+}
+
+// check runs one rule on one target. A panic inside a rule is a bug in
+// oraclint; it becomes an internal-error finding for that file instead of
+// aborting the scan and losing every other result. The panic value is not
+// included because it could contain data from the file.
+func check(r rules.Rule, t *model.Target) (out []rules.Finding) {
+	defer func() {
+		if recover() != nil {
+			m := rules.InternalError
+			out = []rules.Finding{{
+				RuleID:      m.ID,
+				Severity:    m.Severity,
+				Title:       m.Title,
+				Message:     "rule " + r.Metadata().ID + " failed on this file; its result is unknown",
+				Location:    model.Location{File: t.Path},
+				Remediation: m.Remediation,
+			}}
+		}
+	}()
+	return r.Check(t)
 }
 
 // Sort orders findings by file, line, column, rule ID and message, so the

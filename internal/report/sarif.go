@@ -160,7 +160,7 @@ func securitySeverity(s rules.Severity) string {
 }
 
 func writeSARIF(w io.Writer, rep Report) error {
-	catalog := append([]rules.Metadata{rules.ParseError, rules.InvalidSuppression}, rep.Rules...)
+	catalog := append([]rules.Metadata{rules.ParseError, rules.InvalidSuppression, rules.InternalError}, rep.Rules...)
 	index := make(map[string]int, len(catalog))
 	driver := sarifDriver{
 		Name:           "oraclint",
