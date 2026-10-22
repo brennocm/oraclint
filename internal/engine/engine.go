@@ -9,6 +9,7 @@ import (
 	"github.com/brennocm/oraclint/internal/model"
 	"github.com/brennocm/oraclint/internal/redact"
 	"github.com/brennocm/oraclint/internal/rules"
+	"github.com/brennocm/oraclint/internal/suppress"
 )
 
 // Options select which rules run and which findings are kept.
@@ -17,6 +18,9 @@ type Options struct {
 	Experimental bool            // run experimental rules
 	Enable       map[string]bool // rule IDs to run even if experimental
 	Disable      map[string]bool // rule IDs never to run
+	// Suppressions from .oraclint.yaml; nil when there is no config file.
+	// Inline directives come with the targets.
+	Suppressions *suppress.Config
 }
 
 // Select returns the rules that should run with these options.
@@ -36,7 +40,8 @@ func Select(all []rules.Rule, opts Options) []rules.Rule {
 }
 
 // Run checks every target with every applicable rule. Problems from the
-// loader become parse-error findings. Every message is redacted.
+// loader become parse-error findings. Suppressions are applied (findings are
+// marked, not removed) and every message is redacted.
 func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule, opts Options) []rules.Finding {
 	var findings []rules.Finding
 	for _, p := range problems {
@@ -59,6 +64,12 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 		}
 	}
 
+	known := make(map[string]bool, len(all))
+	for _, r := range all {
+		known[r.Metadata().ID] = true
+	}
+	findings = suppress.Apply(findings, targets, opts.Suppressions, func(id string) bool { return known[id] })
+
 	// Safety net: whatever a rule wrote, mask every known secret and
 	// secret-looking pattern before the finding leaves the engine.
 	var redactor redact.Redactor
@@ -70,6 +81,11 @@ func Run(targets []*model.Target, problems []*model.ParseError, all []rules.Rule
 	for _, f := range findings {
 		if f.Severity >= opts.MinSeverity {
 			f.Message = redactor.Apply(f.Message)
+			if f.Suppression != nil {
+				s := *f.Suppression // copy: never mutate shared state
+				s.Reason = redactor.Apply(s.Reason)
+				f.Suppression = &s
+			}
 			kept = append(kept, f)
 		}
 	}
