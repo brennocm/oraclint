@@ -1,0 +1,2 @@
+[Database]
+URL = 'postgresql://chainlink:example-password-123@db.example.com:5432/chainlink?sslmode=verify-full&sslrootcert=/certs/db-ca.pem'

@@ -115,6 +115,90 @@
               }
             },
             {
+              "id": "NS-DB-003",
+              "name": "PostgresTlsDoesNotVerifyTheServer",
+              "shortDescription": {
+                "text": "Postgres TLS does not verify the server"
+              },
+              "fullDescription": {
+                "text": "Postgres TLS does not verify the server. Use sslmode=verify-full with sslrootcert pointing to the database CA."
+              },
+              "help": {
+                "text": "Use sslmode=verify-full with sslrootcert pointing to the database CA.",
+                "markdown": "# NS-DB-003: Postgres TLS does not verify the server\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| low | secrets | experimental | CWE-295 |\n\n## Description\n\nFires when `Database.URL` or `Database.BackupURL` points to a non-internal host\nand:\n\n- `sslmode` is absent or `prefer`: TLS is attempted but the client silently\n  falls back to plaintext (the Go Postgres driver defaults to `prefer`); or\n- `sslmode=require` without `sslrootcert`: traffic is encrypted but the server\n  certificate is not verified.\n\nExperimental (disabled by default; enable with `--experimental` or\n`--enable NS-DB-003`): many managed databases are reached this way inside\nnetworks the operator trusts, so the finding can be noisy.\n\n## Why it matters\n\nWithout certificate verification, an attacker who can intercept traffic\nbetween the node and the database can impersonate the database, capture the\npassword and read or modify node state.\n\n## Vulnerable example\n\n```toml\n[Database]\nURL = 'postgresql://chainlink:...@db.example.com:5432/chainlink'\n```\n\n## Fixed example\n\n```toml\n[Database]\nURL = 'postgresql://chainlink:...@db.example.com:5432/chainlink?sslmode=verify-full\u0026sslrootcert=/certs/db-ca.pem'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md#database\n- https://www.postgresql.org/docs/current/libpq-ssl.html\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-DB-003.md",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "security-severity": "3.0",
+                "precision": "medium",
+                "tags": [
+                  "security",
+                  "secrets",
+                  "CWE-295"
+                ]
+              }
+            },
+            {
+              "id": "NS-DB-004",
+              "name": "SimpleDatabasePasswordsAllowed",
+              "shortDescription": {
+                "text": "Simple database passwords allowed"
+              },
+              "fullDescription": {
+                "text": "Simple database passwords allowed. Remove AllowSimplePasswords / CL_DATABASE_ALLOW_SIMPLE_PASSWORDS and use a database password of at least 16 characters."
+              },
+              "help": {
+                "text": "Remove AllowSimplePasswords / CL_DATABASE_ALLOW_SIMPLE_PASSWORDS and use a database password of at least 16 characters.",
+                "markdown": "# NS-DB-004: Simple database passwords allowed\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | secrets, env, compose, k8s | stable | CWE-521 |\n\n## Description\n\nFires when `Database.AllowSimplePasswords = true` in `secrets.toml` (default\n`false`), or when `CL_DATABASE_ALLOW_SIMPLE_PASSWORDS` is set to `true`\n(case-insensitive, as the node reads it) in a dotenv file, a compose service or\na Kubernetes container.\n\n## Why it matters\n\nThe node normally refuses database URLs whose password is shorter than 16\ncharacters or has surrounding whitespace. This setting skips that check. The\nnode rejects it on production builds (`DatabaseSecrets.validateConfig`), so the\nrule is an **early warning**: it catches the setting before a deployment fails,\nand before a weak database password reaches a non-production build that is\nexposed anyway.\n\n## Vulnerable example\n\n```toml\n[Database]\nAllowSimplePasswords = true\n```\n\n## Fixed example\n\n```toml\n[Database]\n# AllowSimplePasswords removed; database password of 16+ random characters\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md#allowsimplepasswords\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/core/config/toml/types.go\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-DB-004.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "secrets",
+                  "env",
+                  "compose",
+                  "k8s",
+                  "CWE-521"
+                ]
+              }
+            },
+            {
+              "id": "NS-FS-001",
+              "name": "SecretsFileAccessibleByGroupOrOthers",
+              "shortDescription": {
+                "text": "Secrets file accessible by group or others"
+              },
+              "fullDescription": {
+                "text": "Secrets file accessible by group or others. chmod 600 the secrets file and make it owned by the user that runs the node."
+              },
+              "help": {
+                "text": "chmod 600 the secrets file and make it owned by the user that runs the node.",
+                "markdown": "# NS-FS-001: Secrets file accessible by group or others\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| medium | secrets | stable | CWE-732 |\n\n## Description\n\nFires when a secrets file has any group or other permission bit set\n(`mode \u0026 0o077 != 0`), for example `0644` or `0640`.\n\nPOSIX systems only. On Windows, Go does not expose ACLs as permission bits,\nso the rule does not run there. Merged targets have no single file mode and\nare skipped.\n\n## Why it matters\n\n`secrets.toml` holds the database URL with its password and the keystore\npassword. If other local users or services can read it, a compromise of any of\nthem becomes a compromise of the node's keys. The node itself keeps its root\ndirectory at `0700` for the same reason.\n\n## Vulnerable example\n\n```sh\n$ ls -l secrets.toml\n-rw-r--r-- 1 chainlink chainlink 210 secrets.toml\n```\n\n## Fixed example\n\n```sh\nchmod 600 secrets.toml\nchown chainlink:chainlink secrets.toml\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/CONFIG.md#rootdir\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-FS-001.md",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "security-severity": "5.5",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "secrets",
+                  "CWE-732"
+                ]
+              }
+            },
+            {
               "id": "NS-INS-001",
               "name": "DevelopmentOnlyInsecureFlagEnabled",
               "shortDescription": {
@@ -169,6 +253,36 @@
               }
             },
             {
+              "id": "NS-KS-002",
+              "name": "WeakKeystorePassword",
+              "shortDescription": {
+                "text": "Weak keystore password"
+              },
+              "fullDescription": {
+                "text": "Weak keystore password. Use a randomly generated password of at least 16 characters without surrounding whitespace, and change it with the node's keystore password change procedure."
+              },
+              "help": {
+                "text": "Use a randomly generated password of at least 16 characters without surrounding whitespace, and change it with the node's keystore password change procedure.",
+                "markdown": "# NS-KS-002: Weak keystore password\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| high | secrets, env, compose, k8s | stable | CWE-521 |\n\n## Description\n\nFires when `Password.Keystore` or `Password.VRF` in `secrets.toml`, or a\nliteral `CL_PASSWORD_KEYSTORE` / `CL_PASSWORD_VRF` in a dotenv file, compose\nservice or Kubernetes container, fails the node's own complexity rule: at least\n16 characters and no leading or trailing whitespace\n(`utils.VerifyPasswordComplexity`).\n\n## Why it matters\n\nThe keystore password protects the node's private keys, including the keys\nthat sign on-chain transactions and OCR reports. The node checks complexity\nonly when it creates a new, empty keystore; for backwards compatibility it\naccepts any password for an existing keystore\n(`core/cmd/key_store_authenticator.go`, v2.69.0). A node set up with a weak\npassword, or set up before the rule existed, keeps running with it.\n\nThe finding never shows the password or its length.\n\n## Vulnerable example\n\n```toml\n[Password]\nKeystore = 'changeme'\n```\n\n## Fixed example\n\n```toml\n[Password]\nKeystore = '\u003cat least 16 random characters\u003e'\n```\n\nChange the password of an existing keystore with the node's password change\nprocedure, not only in this file.\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md#password\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/core/utils/password.go\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-KS-002.md",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0",
+                "precision": "high",
+                "tags": [
+                  "security",
+                  "secrets",
+                  "env",
+                  "compose",
+                  "k8s",
+                  "CWE-521"
+                ]
+              }
+            },
+            {
               "id": "NS-LOG-001",
               "name": "DebugLogLevel",
               "shortDescription": {
@@ -192,6 +306,33 @@
                   "security",
                   "config",
                   "CWE-532"
+                ]
+              }
+            },
+            {
+              "id": "NS-MET-001",
+              "name": "PrometheusMetricsEndpointWithoutAuthentication",
+              "shortDescription": {
+                "text": "Prometheus metrics endpoint without authentication"
+              },
+              "fullDescription": {
+                "text": "Prometheus metrics endpoint without authentication. Set Prometheus.AuthToken in secrets.toml (or CL_PROMETHEUS_AUTH_TOKEN) and configure the scraper with the bearer token."
+              },
+              "help": {
+                "text": "Set Prometheus.AuthToken in secrets.toml (or CL_PROMETHEUS_AUTH_TOKEN) and configure the scraper with the bearer token.",
+                "markdown": "# NS-MET-001: Prometheus metrics endpoint without authentication\n\n| Severity | Target | Status | CWE |\n|---|---|---|---|\n| low | secrets | experimental | CWE-306 |\n\n## Description\n\nFires when a scanned `secrets.toml` does not set `Prometheus.AuthToken`.\n\nExperimental (disabled by default; enable with `--experimental` or\n`--enable NS-MET-001`): the token can also come from the\n`CL_PROMETHEUS_AUTH_TOKEN` environment variable, which a file scan of the\nsecrets file cannot see.\n\n## Why it matters\n\nThe `/metrics` endpoint shares the operator web server port. Without a token\nthe node serves metrics to anyone who can reach that port\n(`core/web/router.go`: the bearer check is skipped when the token is empty).\nMetrics reveal the jobs the node runs, chains, balances-related gauges and\nsoftware versions, which is useful reconnaissance. Profiling endpoints\n(`/debug/pprof`) are always behind authentication.\n\n## Vulnerable example\n\n```toml\n# secrets.toml without a [Prometheus] section\n[Password]\nKeystore = '...'\n```\n\n## Fixed example\n\n```toml\n[Prometheus]\nAuthToken = '\u003crandom token\u003e'\n```\n\n## References\n\n- https://github.com/smartcontractkit/chainlink/blob/v2.69.0/docs/SECRETS.md#prometheus\n"
+              },
+              "helpUri": "https://github.com/brennocm/oraclint/blob/main/docs/rules/NS-MET-001.md",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "security-severity": "3.0",
+                "precision": "medium",
+                "tags": [
+                  "security",
+                  "secrets",
+                  "CWE-306"
                 ]
               }
             },
@@ -582,7 +723,7 @@
       "results": [
         {
           "ruleId": "NS-KS-001",
-          "ruleIndex": 5,
+          "ruleIndex": 8,
           "level": "error",
           "message": {
             "text": "InsecureFastScrypt = true makes every keystore use weak scrypt parameters"
@@ -604,7 +745,7 @@
         },
         {
           "ruleId": "NS-RPC-001",
-          "ruleIndex": 7,
+          "ruleIndex": 12,
           "level": "error",
           "message": {
             "text": "EVM chain \"1\" node \"a\": WSURL uses unencrypted ws:// to rpc.example.com"
