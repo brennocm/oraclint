@@ -16,6 +16,6 @@ RUN go mod download && go mod verify
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=action" -o /out/oraclint ./cmd/oraclint
 
-FROM gcr.io/distroless/static@sha256:034df5c1737e8241f6ed6423a12e720ee0f6d6f088609ee172f98f6f2166ef5d
+FROM gcr.io/distroless/static@sha256:4c2cd1dee442c9a99924a378c7c126fac8fef14771579ef567c3f2bdd7a5122a
 COPY --from=build /out/oraclint /usr/bin/oraclint
 ENTRYPOINT ["/usr/bin/oraclint"]
